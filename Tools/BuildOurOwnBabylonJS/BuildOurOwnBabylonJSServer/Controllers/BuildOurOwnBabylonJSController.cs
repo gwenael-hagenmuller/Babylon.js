@@ -1,7 +1,7 @@
 ﻿using System.Web.Mvc;
-using System.IO;
 using System.Text;
 using System;
+using System.IO;
 
 namespace BuildOurOwnBabylonJSServer.Controllers
 {
@@ -48,7 +48,10 @@ namespace BuildOurOwnBabylonJSServer.Controllers
                     break;
             }
 
-            return File(new FileStream(absPath, FileMode.Open), type);
+            if (System.IO.File.Exists(absPath))
+                return File(new FileStream(absPath, FileMode.Open), type);
+            else
+                return new HttpNotFoundResult();
         }
     }
 }

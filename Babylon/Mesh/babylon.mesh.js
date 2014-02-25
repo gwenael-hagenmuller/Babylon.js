@@ -1,4 +1,4 @@
-﻿"use strict";
+"use strict";
 
 var BABYLON = BABYLON || {};
 
@@ -130,8 +130,8 @@ var BABYLON = BABYLON || {};
         }
     };
 
-    BABYLON.Mesh.prototype.getAbsolutePosition = function () {
-        this.computeWorldMatrix();
+    BABYLON.Mesh.prototype.getAbsolutePosition = function (force) {
+        this.computeWorldMatrix(force);
         return this._absolutePosition;
     };
 
@@ -231,34 +231,9 @@ var BABYLON = BABYLON || {};
     };
 
     BABYLON.Mesh.prototype._isSynchronized = function () {
-        if (this.billboardMode !== BABYLON.Mesh.BILLBOARDMODE_NONE)
-            return false;
-
-        if (this._cache.pivotMatrixUpdated) {
-            return false;
-        }
-
-        if (this.infiniteDistance) {
-            return false;
-        }
-
-        if (!this._cache.position.equals(this.position))
-            return false;
-
-        if (this.rotationQuaternion) {
-            if (!this._cache.rotationQuaternion.equals(this.rotationQuaternion))
-                return false;
-        } else {
-            if (!this._cache.rotation.equals(this.rotation))
-                return false;
-        }
-
-        if (!this._cache.scaling.equals(this.scaling))
-            return false;
-
-        return true;
+        return this.computeLocalWorldMatrix(false, true);
     };
-
+    
     BABYLON.Mesh.prototype.isReady = function () {
         return this._isReady;
     };
@@ -322,22 +297,135 @@ var BABYLON = BABYLON || {};
         }
 
     };
-
+    
+    // returns true if it was already updated
     BABYLON.Mesh.prototype.computeWorldMatrix = function (force) {
-        if (!force && (this._currentRenderId == this._scene.getRenderId() || this.isSynchronized(true))) {
-            this._currentRenderId = this._scene.getRenderId();
-            return this._worldMatrix;
-        }
-
-        this._cache.position.copyFrom(this.position);
-        this._cache.scaling.copyFrom(this.scaling);
-        this._cache.pivotMatrixUpdated = false;
         this._currentRenderId = this._scene.getRenderId();
 
-        // Scaling
-        BABYLON.Matrix.ScalingToRef(this.scaling.x, this.scaling.y, this.scaling.z, this._localScaling);
+        var hasNewParent = this.hasNewParent();
+        
+        var isSynchronized = this.isSynchronized(true);
+        
+        if(!this._continueComputing(isSynchronized, force, false, this._currentRenderId)) {
+            return isSynchronized;
+        }
+        
+        // Parent
+        if (this.parent) {
+            var isSync = this.parent.computeWorldMatrix(force);
+            isSync = this.computeLocalWorldMatrix(force) && isSync;
+            
+            if (hasNewParent || !isSync) {
+                this._localWorld.multiplyToRef(this.parent.getWorldMatrix(), this._worldMatrix);
+            }
+            // else: cannot happen otherwise isSynchronised(true) would have returned true
+        }
+        else if (hasNewParent || !this.computeLocalWorldMatrix(force)) {
+            this._worldMatrix.copyFrom(this._localWorld);
+        }
+        // else: cannot happen otherwise isSynchronised(true) would have returned true
 
-        // Rotation
+        // Bounding info
+        this._updateBoundingInfo();
+
+        // Absolute position
+        this._absolutePosition.copyFromFloats(this._worldMatrix.m[12], this._worldMatrix.m[13], this._worldMatrix.m[14]);
+        
+        return false;
+    };
+    
+    BABYLON.Mesh.prototype._continueComputing = function (isSynchronized, force, simulate, sceneRenderId) {
+        if (isSynchronized || simulate || (!force && this._currentRenderId == (sceneRenderId || this._scene.getRenderId()))) {
+            return false;
+        }
+
+        this._currentRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        // !isSynchronized && !simulate && (force || this._currentRenderId != this._scene.getRenderId())
+        return true;
+    };
+
+    BABYLON.Mesh.prototype.computeLocalScalingMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var isSynchronized = this._cache.scaling.equals(this.scaling);
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+        
+        this._cache.scaling.copyFrom(this.scaling);
+        BABYLON.Matrix.ScalingToRef(this.scaling.x, this.scaling.y, this.scaling.z, this._localScaling);
+        return false;
+    };
+    
+    BABYLON.Mesh.prototype.computeLocalPivotScalingMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var isSynchronized = !this._cache.pivotMatrixUpdated
+                        && this.computeLocalScalingMatrix(force, simulate, sceneRenderId);
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+
+        this._pivotMatrix.multiplyToRef(this._localScaling, this._localPivotScaling);
+        this._cache.pivotMatrixUpdated = false;
+        return false;
+    };
+    
+    BABYLON.Mesh.prototype.computeLocalPivotScalingRotationMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var localPivotScalingIsSynchronized = false;
+        var localRotationIsSynchronized = false;
+        var localBillboardIsSynchronized = false;
+        
+        var isSynchronized = !(this.billboardMode !== BABYLON.Mesh.BILLBOARDMODE_NONE);
+        if (simulate) {
+            isSynchronized = isSynchronized && (localRotationIsSynchronized = this.computeLocalRotationMatrix(force, simulate, sceneRenderId));
+        } else {
+            isSynchronized = (localRotationIsSynchronized = this.computeLocalRotationMatrix(force, simulate, sceneRenderId)) && isSynchronized;
+        }
+        if (simulate) {
+            isSynchronized = isSynchronized && (localPivotScalingIsSynchronized = this.computeLocalPivotScalingMatrix(force, simulate, sceneRenderId));
+        } else {
+            isSynchronized = (localPivotScalingIsSynchronized = this.computeLocalPivotScalingMatrix(force, simulate, sceneRenderId)) && isSynchronized;
+        }
+        if (simulate) {
+            isSynchronized = isSynchronized && (localBillboardIsSynchronized = this.computeLocalBillboardMatrix(force, simulate, sceneRenderId));
+        } else {
+            isSynchronized = (localBillboardIsSynchronized = this.computeLocalBillboardMatrix(force, simulate, sceneRenderId)) && isSynchronized;
+        }
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+
+        if (!localPivotScalingIsSynchronized || !localRotationIsSynchronized) {
+            this._localPivotScaling.multiplyToRef(this._localRotation, this._localPivotScalingRotation);
+        }
+
+        if (!localBillboardIsSynchronized) {
+            // todo: use another matrix instead of _localWorld
+            this._localPivotScalingRotation.multiplyToRef(this._localBillboard, this._localWorld);
+            this._rotateYByPI.multiplyToRef(this._localWorld, this._localPivotScalingRotation);
+        }
+        
+        return false;
+    };
+    
+    BABYLON.Mesh.prototype.computeLocalRotationMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var isSynchronized = this.rotationQuaternion ? 
+            this._cache.rotationQuaternion.equals(this.rotationQuaternion) : 
+            this._cache.rotation.equals(this.rotation);
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+
         if (this.rotationQuaternion) {
             this.rotationQuaternion.toRotationMatrix(this._localRotation);
             this._cache.rotationQuaternion.copyFrom(this.rotationQuaternion);
@@ -345,11 +433,40 @@ var BABYLON = BABYLON || {};
             BABYLON.Matrix.RotationYawPitchRollToRef(this.rotation.y, this.rotation.x, this.rotation.z, this._localRotation);
             this._cache.rotation.copyFrom(this.rotation);
         }
-
-        // Translation
-        if (this.infiniteDistance && !this.parent) {
+        
+        return false;
+    };
+    
+    BABYLON.Mesh.prototype.computeLocalTranslationMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var notInfiniteDistance = false;
+        var notBillboarding = false;
+        var positionIsSynchronized = this._cache.position.equals(this.position);
+        
+        var isSynchronized = positionIsSynchronized;
+        if (simulate) {
+            isSynchronized = isSynchronized && (notInfiniteDistance = (!this.infiniteDistance || this.parent));
+        } else {
+            isSynchronized = (infiniteDistance = (!this.infiniteDistance || this.parent)) && isSynchronized;
+        }
+        if (simulate) {
+            isSynchronized = isSynchronized && (notBillboarding = (!(this.billboardMode !== BABYLON.Mesh.BILLBOARDMODE_NONE) || !this.parent || !this.parent.position));
+        } else {
+            isSynchronized = (notBillboarding = (!(this.billboardMode !== BABYLON.Mesh.BILLBOARDMODE_NONE) || !this.parent || !this.parent.position)) && isSynchronized;
+        }
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+        
+        if (!positionIsSynchronized) {
+            this._cache.position.copyFrom(this.position);
+        }
+        
+        if (!notInfiniteDistance) {
             var camera = this._scene.activeCamera;
-            var cameraWorldMatrix = camera.getWorldMatrix();
+            var cameraWorldMatrix = camera.getWorldMatrix(); // todo: computeWorldMatrix returns bool
 
             var cameraGlobalPosition = new BABYLON.Vector3(cameraWorldMatrix.m[12], cameraWorldMatrix.m[13], cameraWorldMatrix.m[14]);
 
@@ -357,61 +474,71 @@ var BABYLON = BABYLON || {};
         } else {
             BABYLON.Matrix.TranslationToRef(this.position.x, this.position.y, this.position.z, this._localTranslation);
         }
-
-        // Composing transformations
-        this._pivotMatrix.multiplyToRef(this._localScaling, this._localPivotScaling);
-        this._localPivotScaling.multiplyToRef(this._localRotation, this._localPivotScalingRotation);
-
+        
         // Billboarding
-        if (this.billboardMode !== BABYLON.Mesh.BILLBOARDMODE_NONE) {
-            var localPosition = this.position.clone();
-            var zero = this._scene.activeCamera.position.clone();
-
-            if (this.parent && this.parent.position) {
-                localPosition.addInPlace(this.parent.position);
-                BABYLON.Matrix.TranslationToRef(localPosition.x, localPosition.y, localPosition.z, this._localTranslation);
-            }
-
-            if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_ALL === BABYLON.Mesh.BILLBOARDMODE_ALL) {
-                zero = this._scene.activeCamera.position;
-            } else {
-                if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_X)
-                    zero.x = localPosition.x + BABYLON.Engine.epsilon;
-                if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_Y)
-                    zero.y = localPosition.y + BABYLON.Engine.epsilon;
-                if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_Z)
-                    zero.z = localPosition.z + BABYLON.Engine.epsilon;
-            }
-
-            BABYLON.Matrix.LookAtLHToRef(localPosition, zero, BABYLON.Vector3.Up(), this._localBillboard);
-            this._localBillboard.m[12] = this._localBillboard.m[13] = this._localBillboard.m[14] = 0;
-
-            this._localBillboard.invert();
-
-            this._localPivotScalingRotation.multiplyToRef(this._localBillboard, this._localWorld);
-            this._rotateYByPI.multiplyToRef(this._localWorld, this._localPivotScalingRotation);
+        if (!notBillboarding) {
+            var localPosition = this.position.add(this.parent.position);
+            BABYLON.Matrix.TranslationToRef(localPosition.x, localPosition.y, localPosition.z, this._localTranslation);
         }
-
-        // Local world
-        this._localPivotScalingRotation.multiplyToRef(this._localTranslation, this._localWorld);
-
-        // Parent
-        if (this.parent && this.parent.getWorldMatrix && this.billboardMode === BABYLON.Mesh.BILLBOARDMODE_NONE) {
-            this._localWorld.multiplyToRef(this.parent.getWorldMatrix(), this._worldMatrix);
-        } else {
-            this._worldMatrix.copyFrom(this._localWorld);
-        }
-
-        // Bounding info
-        this._updateBoundingInfo();
-
-        // Absolute position
-        this._absolutePosition.copyFromFloats(this._worldMatrix.m[12], this._worldMatrix.m[13], this._worldMatrix.m[14]);
-
-        return this._worldMatrix;
+        
+        return false;
     };
+    
+    BABYLON.Mesh.prototype.computeLocalBillboardMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var isSynchronized = !(this.billboardMode !== BABYLON.Mesh.BILLBOARDMODE_NONE);
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+        
+        var localPosition = this.position.clone(); // todo: instance variable for localPosition
+        var zero = this._scene.activeCamera.position.clone();
 
+        if (this.parent && this.parent.position) {
+            localPosition.addInPlace(this.parent.position);
+        }
 
+        if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_ALL === BABYLON.Mesh.BILLBOARDMODE_ALL) {
+            zero = this._scene.activeCamera.position;
+        } else {
+            if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_X)
+                zero.x = localPosition.x + BABYLON.Engine.epsilon;
+            if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_Y)
+                zero.y = localPosition.y + BABYLON.Engine.epsilon;
+            if (this.billboardMode & BABYLON.Mesh.BILLBOARDMODE_Z)
+                zero.z = localPosition.z + BABYLON.Engine.epsilon;
+        }
+
+        BABYLON.Matrix.LookAtLHToRef(localPosition, zero, BABYLON.Vector3.Up(), this._localBillboard);
+        this._localBillboard.m[12] = this._localBillboard.m[13] = this._localBillboard.m[14] = 0;
+
+        this._localBillboard.invert();
+
+        return false;
+    };
+    
+    BABYLON.Mesh.prototype.computeLocalWorldMatrix = function (force, simulate, sceneRenderId) {
+        sceneRenderId = sceneRenderId || this._scene.getRenderId();
+        
+        var isSynchronized = this.computeLocalPivotScalingRotationMatrix(force, simulate, sceneRenderId);
+        if (simulate) {
+            isSynchronized = isSynchronized && this.computeLocalTranslationMatrix(force, simulate, sceneRenderId);
+        } else {
+            isSynchronized = this.computeLocalTranslationMatrix(force, simulate, sceneRenderId) && isSynchronized;
+        }
+        
+        if(!this._continueComputing(isSynchronized, force, simulate, sceneRenderId)) {
+            return isSynchronized;
+        }
+        
+        // todo: if only _localTranslation was updated compute corresponding matrix members
+        
+        this._localPivotScalingRotation.multiplyToRef(this._localTranslation, this._localWorld);
+        return false;
+    };
+    
     BABYLON.Mesh.prototype._createGlobalSubMesh = function () {
         if (!this._totalVertices || !this._indices) {
             return null;
