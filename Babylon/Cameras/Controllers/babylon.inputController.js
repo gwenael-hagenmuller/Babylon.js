@@ -89,11 +89,11 @@ var BABYLON = BABYLON || {};
 
 	};
 
-	BABYLON.inputFilter = function (scene, target) {
+	BABYLON.InputFilter = function (scene, target) {
 	    BABYLON.InputController.call(this, scene, target);
 	};
-	BABYLON.inputFilter.prototype = Object.create(BABYLON.InputController.prototype);
-	BABYLON.inputFilter.prototype.update = function () {
+	BABYLON.InputFilter.prototype = Object.create(BABYLON.InputController.prototype);
+	BABYLON.InputFilter.prototype.update = function () {
 	    if (this.controllers) {
 	        for (var i = 0; i < this.controllers.length; ++i) {
 	            this.controllers[i].update();
@@ -101,19 +101,19 @@ var BABYLON = BABYLON || {};
 	    }
 	};
 
-	BABYLON.inputFilter.prototype.getPosition = function () {
+	BABYLON.InputFilter.prototype.getPosition = function () {
 	    return this.target.getPosition();
 	};
-	BABYLON.inputFilter.prototype.getOrientation = function () {
+	BABYLON.InputFilter.prototype.getOrientation = function () {
 	    return this.target.getOrientation();
 	};
-	BABYLON.inputFilter.prototype.getOrientationMatrix = function () { return this.target.getOrientationMatrix(); };
-	BABYLON.inputFilter.prototype.getInvertOrientationMatrix = function () { return this.target.getInvertOrientationMatrix(); };
-	BABYLON.inputFilter.prototype.moveRelative = function (movementVector) {
+	BABYLON.InputFilter.prototype.getOrientationMatrix = function () { return this.target.getOrientationMatrix(); };
+	BABYLON.InputFilter.prototype.getInvertOrientationMatrix = function () { return this.target.getInvertOrientationMatrix(); };
+	BABYLON.InputFilter.prototype.moveRelative = function (movementVector) {
 	    this.target.moveRelative(movementVector);
 	};
 
-	BABYLON.inputFilter.prototype.rotateRelative = function (relativeOrientation) {
+	BABYLON.InputFilter.prototype.rotateRelative = function (relativeOrientation) {
 	    this.target.rotateRelative(relativeOrientation);
 	};
 })();

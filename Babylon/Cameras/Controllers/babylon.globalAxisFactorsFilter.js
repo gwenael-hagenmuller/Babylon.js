@@ -4,14 +4,14 @@ var BABYLON = BABYLON || {};
 
 (function () {
 	BABYLON.GlobalAxisFactorsFilter = function (scene, target, xFactor, yFactor, zFactor) {
-		BABYLON.inputFilter.call(this, scene,target);
+		BABYLON.InputFilter.call(this, scene,target);
 		this.xFactor = xFactor;
 		this.yFactor = yFactor;
 		this.zFactor = zFactor;
 
 		this._globalMovement = new BABYLON.Vector3(0, 0, 0);
 	};
-	BABYLON.GlobalAxisFactorsFilter.prototype = Object.create(BABYLON.inputFilter.prototype);
+	BABYLON.GlobalAxisFactorsFilter.prototype = Object.create(BABYLON.InputFilter.prototype);
 	BABYLON.GlobalAxisFactorsFilter.prototype.moveRelative = function (relativeMovement) {
 		var orientation = this.getOrientation();
 		BABYLON.Vector3.TransformNormalToRef(relativeMovement, this.getOrientationMatrix(), this._globalMovement);
