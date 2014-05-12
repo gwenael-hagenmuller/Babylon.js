@@ -1212,6 +1212,16 @@
             return ground;
         }
 
+        // Circle
+        public static CreateCircle(name: string, diameter: number, tessellation: number, scene: Scene, updatable?: boolean): Mesh {
+            var circle = new BABYLON.Mesh(name, scene);
+            var vertexData = BABYLON.VertexData.CreateCircle(diameter, tessellation);
+
+            vertexData.applyToMesh(circle, updatable);
+
+            return circle;
+        }
+
         // Tools
         public static MinMax(meshes: Mesh[]): {min: Vector3; max: Vector3} {
             var minVector = null;

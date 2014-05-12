@@ -378,6 +378,9 @@
         else if (geometry instanceof Geometry.Primitives.TorusKnot) {
             serializationGeometries.torusKnots.push(serializeTorusKnot(<Geometry.Primitives.TorusKnot>geometry));
         }
+        else if (geometry instanceof Geometry.Primitives.Circle) {
+            serializationGeometries.planes.push(serializeCircle(<Geometry.Primitives.Circle>geometry));
+        }
         else if (geometry instanceof Geometry.Primitives._Primitive) {
             throw new Error("Unknow primitive type");
         }
@@ -510,6 +513,15 @@
         serializationObject.tubularSegments = torusKnot.tubularSegments;
         serializationObject.p = torusKnot.p;
         serializationObject.q = torusKnot.q;
+
+        return serializationObject;
+    };
+
+    var serializeCircle = (circle: Geometry.Primitives.Circle): any => {
+        var serializationObject = serializePrimitive(circle);
+
+        serializationObject.diameter = circle.diameter;
+        serializationObject.tessellation = circle.tessellation;
 
         return serializationObject;
     };

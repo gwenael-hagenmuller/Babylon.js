@@ -448,6 +448,19 @@ var BABYLON = BABYLON || {};
         return torusKnot;
     };
 
+    var parseCircle = function (parsedCircle, scene) {
+        if (parseGeometry(parsedCircle, scene)) {
+            return null; // null since geometry could be something else than a circle...
+        }
+
+        var circle = new BABYLON.Geometry.Primitives.Circle(parsedCircle.id, scene.getEngine(), parsedCircle.diameter, parsedCircle.tessellation, parsedCircle.canBeRegenerated, null);
+        BABYLON.Tags.AddTagsTo(circle, parsedCircle.tags);
+
+        scene.pushGeometry(circle, true);
+
+        return circle;
+    };
+
     var parseVertexData = function (parsedVertexData, scene, rootUrl) {
         if (parseGeometry(parsedVertexData, scene)) {
             return null; // null since geometry could be a primitive
@@ -955,6 +968,15 @@ var BABYLON = BABYLON || {};
                     for (var index = 0; index < planes.length; index++) {
                         var parsedPlane = planes[index];
                         parsePlane(parsedPlane, scene);
+                    }
+                }
+
+                // Circles
+                var circles = geometries.circles;
+                if (circles) {
+                    for (var index = 0; index < circles.length; index++) {
+                        var parsedCircle = circles[index];
+                        parseCircle(parsedCircle, scene);
                     }
                 }
 

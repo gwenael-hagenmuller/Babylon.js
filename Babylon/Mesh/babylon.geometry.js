@@ -595,6 +595,25 @@ var BABYLON;
                 return TorusKnot;
             })(_Primitive);
             Primitives.TorusKnot = TorusKnot;
+
+            var Circle = (function (_super) {
+                __extends(Circle, _super);
+                function Circle(id, engine, diameter, tessellation, canBeRegenerated, mesh) {
+                    this.diameter = diameter;
+                    this.tessellation = tessellation;
+
+                    _super.call(this, id, engine, this._regenerateVertexData(), canBeRegenerated, mesh);
+                }
+                Circle.prototype._regenerateVertexData = function () {
+                    return BABYLON.VertexData.CreateCircle(this.diameter, this.tessellation);
+                };
+
+                Circle.prototype.copy = function (id) {
+                    return new Circle(id, this.getEngine(), this.diameter, this.tessellation, this.canBeRegenerated(), null);
+                };
+                return Circle;
+            })(_Primitive);
+            Primitives.Circle = Circle;
         })(Geometry.Primitives || (Geometry.Primitives = {}));
         var Primitives = Geometry.Primitives;
     })(BABYLON.Geometry || (BABYLON.Geometry = {}));

@@ -388,6 +388,7 @@
                 return new BABYLON.Vector3(dx, 0, dz);
             };
 
+            // TODO
             var createCylinderCap = isTop => {
                 var radius = isTop ? radiusTop : radiusBottom;
 
@@ -768,6 +769,55 @@
 
             // Normals
             BABYLON.VertexData.ComputeNormals(positions, indices, normals);
+
+            // Result
+            var vertexData = new BABYLON.VertexData();
+
+            vertexData.indices = indices;
+            vertexData.positions = positions;
+            vertexData.normals = normals;
+            vertexData.uvs = uvs;
+
+            return vertexData;
+        }
+
+        public static CreateCircle(diameter: number, tessellation: number): VertexData {
+            var indices = [];
+            var positions = [];
+            var normals = [];
+            var uvs = [];
+
+            diameter = diameter || 1;
+            tessellation = tessellation || 16;
+
+            // TODO
+
+            // Vertices
+            var halfSize = diameter / 2.0;
+            positions.push(-halfSize, -halfSize, 0);
+            normals.push(0, 0, -1.0);
+            uvs.push(0.0, 0.0);
+
+            positions.push(halfSize, -halfSize, 0);
+            normals.push(0, 0, -1.0);
+            uvs.push(1.0, 0.0);
+
+            positions.push(halfSize, halfSize, 0);
+            normals.push(0, 0, -1.0);
+            uvs.push(1.0, 1.0);
+
+            positions.push(-halfSize, halfSize, 0);
+            normals.push(0, 0, -1.0);
+            uvs.push(0.0, 1.0);
+
+            // Indices
+            indices.push(0);
+            indices.push(1);
+            indices.push(2);
+
+            indices.push(0);
+            indices.push(2);
+            indices.push(3);
 
             // Result
             var vertexData = new BABYLON.VertexData();

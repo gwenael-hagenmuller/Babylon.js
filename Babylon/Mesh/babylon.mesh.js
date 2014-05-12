@@ -1184,6 +1184,16 @@ var BABYLON;
             return ground;
         };
 
+        // Circle
+        Mesh.CreateCircle = function (name, diameter, tessellation, scene, updatable) {
+            var circle = new BABYLON.Mesh(name, scene);
+            var vertexData = BABYLON.VertexData.CreateCircle(diameter, tessellation);
+
+            vertexData.applyToMesh(circle, updatable);
+
+            return circle;
+        };
+
         // Tools
         Mesh.MinMax = function (meshes) {
             var minVector = null;

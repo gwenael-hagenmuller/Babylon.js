@@ -370,6 +370,8 @@
             serializationGeometries.planes.push(serializePlane(geometry));
         } else if (geometry instanceof BABYLON.Geometry.Primitives.TorusKnot) {
             serializationGeometries.torusKnots.push(serializeTorusKnot(geometry));
+        } else if (geometry instanceof BABYLON.Geometry.Primitives.Circle) {
+            serializationGeometries.planes.push(serializeCircle(geometry));
         } else if (geometry instanceof BABYLON.Geometry.Primitives._Primitive) {
             throw new Error("Unknow primitive type");
         } else {
@@ -501,6 +503,15 @@
         serializationObject.tubularSegments = torusKnot.tubularSegments;
         serializationObject.p = torusKnot.p;
         serializationObject.q = torusKnot.q;
+
+        return serializationObject;
+    };
+
+    var serializeCircle = function (circle) {
+        var serializationObject = serializePrimitive(circle);
+
+        serializationObject.diameter = circle.diameter;
+        serializationObject.tessellation = circle.tessellation;
 
         return serializationObject;
     };

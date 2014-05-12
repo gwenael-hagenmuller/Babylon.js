@@ -625,5 +625,26 @@
                 return new TorusKnot(id, this.getEngine(), this.radius, this.tube, this.radialSegments, this.tubularSegments, this.p, this.q, this.canBeRegenerated(), null);
             }
         }
+
+        export class Circle extends _Primitive {
+            // Members
+            public diameter: number;
+            public tessellation: number;
+
+            constructor(id: string, engine: Engine, diameter: number, tessellation: number, canBeRegenerated?: boolean, mesh?: Mesh) {
+                this.diameter = diameter;
+                this.tessellation = tessellation;
+
+                super(id, engine, this._regenerateVertexData(), canBeRegenerated, mesh);
+            }
+
+            public _regenerateVertexData(): VertexData {
+                return VertexData.CreateCircle(this.diameter, this.tessellation);
+            }
+
+            public copy(id: string): Geometry {
+                return new Circle(id, this.getEngine(), this.diameter, this.tessellation, this.canBeRegenerated(), null);
+            }
+        }
     }
 } 
