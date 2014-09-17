@@ -56,7 +56,9 @@
   <script src="Babylon/Sprites/babylon.sprite.js"></script>
   <script src="Babylon/Sprites/babylon.spriteManager.js"></script>
   <script src="Babylon/Loading/Plugins/babylon.babylonFileLoader.js"></script>
+  <script src="Babylon/Loading/Plugins/babylon.babylonGeometriesLoader.js"></script>
   <script src="Babylon/Loading/babylon.sceneLoader.js"></script>
+  <script src="Babylon/Loading/babylon.geometriesLoader.js"></script>
   <script src="Babylon/Materials/babylon.multiMaterial.js"></script>
   <script src="Babylon/Materials/babylon.standardMaterial.js"></script>
   <script src="Babylon/Materials/babylon.material.js"></script>

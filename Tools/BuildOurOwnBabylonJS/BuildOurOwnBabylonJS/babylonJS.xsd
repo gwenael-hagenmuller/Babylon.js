@@ -7,8 +7,8 @@
   <xsd:element name="files">
     <xsd:complexType>
       <xsd:sequence minOccurs="0">
-        <xsd:element ref="xi:include" minOccurs="0" maxOccurs="unbounded" />
         <xsd:element ref="script" minOccurs="0" maxOccurs="unbounded" />
+        <xsd:element ref="xi:include" minOccurs="0" maxOccurs="unbounded" />
       </xsd:sequence>
     </xsd:complexType>
     <xsd:unique name="UniqueSrc">

@@ -623,7 +623,8 @@
 
         public getGeometryByID(id: string): Geometry {
             for (var index = 0; index < this._geometries.length; index++) {
-                if (this._geometries[index].id === id) {
+                var geometry = this._geometries[index];
+                if (geometry.id === id || geometry.hasAlias(id)) {
                     return this._geometries[index];
                 }
             }

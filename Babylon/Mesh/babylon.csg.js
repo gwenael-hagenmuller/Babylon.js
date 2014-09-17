@@ -332,6 +332,53 @@
             return csg;
         };
 
+        // Convert BABYLON.VertexData to BABYLON.CSG
+        CSG.FromVertexData = function (vertexData) {
+            var polygons = [];
+            var polygon;
+
+            var normal;
+            var uv;
+            var position;
+            var vertices;
+            var indice;
+
+            var indices = vertexData.indices;
+            var positions = vertexData.positions;
+            var normals = vertexData.normals;
+            var uvs = vertexData.uvs;
+
+            for (var i = 0; i < indices.length; i += 3) {
+                vertices = [];
+                for (var j = 0; j < 3; j++) {
+                    indice = indices[i + j];
+
+                    normal = new BABYLON.Vector3(normals[indice * 3], normals[indice * 3 + 1], normals[indice * 3 + 2]);
+                    uv = new BABYLON.Vector2(uvs[indice * 2], uvs[indice * 2 + 1]);
+                    position = new BABYLON.Vector3(positions[indice * 3], positions[indice * 3 + 1], positions[indice * 3 + 2]);
+
+                    vertices.push(new Vertex(position, normal, uv));
+                }
+
+                // no subMeshId, no meshId, no materialIndex since they are mesh properties
+                polygon = new Polygon(vertices, {});
+
+                // To handle the case of degenerated triangle
+                // polygon.plane == null <=> the polygon does not represent 1 single plane <=> the triangle is degenerated
+                if (polygon.plane)
+                    polygons.push(polygon);
+            }
+
+            var csg = CSG.FromPolygons(polygons);
+            csg.matrix = BABYLON.Matrix.Identity(); //VertexData is like a mesh at the origin of the world so vectors do not need to be transformed
+            csg.position = BABYLON.Vector3.Zero(); //VertexData is like a mesh at the origin of the world so vectors do not need to be transformed
+            csg.rotation = BABYLON.Vector3.Zero(); //VertexData is like a mesh at the origin of the world so vectors do not need to be transformed
+            csg.scaling = new BABYLON.Vector3(1, 1, 1); //VertexData is like a mesh at the origin of the world so vectors do not need to be transformed
+            currentCSGMeshId++;
+
+            return csg;
+        };
+
         // Construct a BABYLON.CSG solid from a list of `BABYLON.CSG.Polygon` instances.
         CSG.FromPolygons = function (polygons) {
             var csg = new BABYLON.CSG();
@@ -565,6 +612,56 @@
             mesh.computeWorldMatrix(true);
 
             return mesh;
+        };
+
+        CSG.prototype.buildVertexDataGeometry = function () {
+            var matrix = this.matrix.clone();
+            matrix.invert();
+
+            var vertexData = new BABYLON.VertexData(), vertices = [], indices = [], normals = [], uvs = [], vertex = BABYLON.Vector3.Zero(), normal = BABYLON.Vector3.Zero(), uv = BABYLON.Vector2.Zero(), polygons = this.polygons, polygonIndices = [0, 0, 0], polygon, vertice_dict = {}, vertex_idx, currentIndex = 0;
+
+            for (var i = 0, il = polygons.length; i < il; i++) {
+                polygon = polygons[i];
+
+                for (var j = 2, jl = polygon.vertices.length; j < jl; j++) {
+                    polygonIndices[0] = 0;
+                    polygonIndices[1] = j - 1;
+                    polygonIndices[2] = j;
+
+                    for (var k = 0; k < 3; k++) {
+                        vertex.copyFrom(polygon.vertices[polygonIndices[k]].pos);
+                        normal.copyFrom(polygon.vertices[polygonIndices[k]].normal);
+                        uv.copyFrom(polygon.vertices[polygonIndices[k]].uv);
+                        BABYLON.Vector3.TransformCoordinatesToRef(vertex, matrix, vertex);
+                        BABYLON.Vector3.TransformNormalToRef(normal, matrix, normal);
+
+                        vertex_idx = vertice_dict[vertex.x + ',' + vertex.y + ',' + vertex.z];
+
+                        // Check if 2 points can be merged
+                        if (!(typeof vertex_idx !== 'undefined' && normals[vertex_idx * 3] === normal.x && normals[vertex_idx * 3 + 1] === normal.y && normals[vertex_idx * 3 + 2] === normal.z && uvs[vertex_idx * 2] === uv.x && uvs[vertex_idx * 2 + 1] === uv.y)) {
+                            vertices.push(vertex.x, vertex.y, vertex.z);
+                            uvs.push(uv.x, uv.y);
+                            normals.push(normal.x, normal.y, normal.z);
+                            vertex_idx = vertice_dict[vertex.x + ',' + vertex.y + ',' + vertex.z] = (vertices.length / 3) - 1;
+                        }
+
+                        indices.push(vertex_idx);
+
+                        currentIndex++;
+                    }
+                }
+            }
+
+            vertexData.positions = vertices;
+            vertexData.normals = normals;
+            vertexData.uvs = uvs;
+            vertexData.indices = indices;
+
+            return vertexData;
+        };
+
+        CSG.prototype.toVertexData = function () {
+            return this.buildVertexDataGeometry();
         };
         return CSG;
     })();

@@ -29,6 +29,27 @@ var BABYLON;
                 this.applyToMesh(mesh);
             }
         }
+        Geometry.prototype.hasAlias = function (alias) {
+            if (!this._aliases) {
+                return false;
+            }
+
+            for (var index = 0; index < this._aliases.length; index++) {
+                if (this._aliases[index] === alias)
+                    return true;
+            }
+            return false;
+        };
+
+        Geometry.prototype.addAlias = function (alias) {
+            if (this.hasAlias(alias)) {
+                return;
+            }
+
+            this._aliases = this._aliases || [];
+            this._aliases.push(alias);
+        };
+
         Geometry.prototype.getScene = function () {
             return this._scene;
         };

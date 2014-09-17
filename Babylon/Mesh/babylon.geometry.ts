@@ -6,6 +6,7 @@
         public delayLoadingFile: string;
 
         // Private
+        private _aliases: string[];
         private _scene: Scene;
         private _engine: Engine;
         private _meshes: Mesh[];
@@ -36,6 +37,26 @@
             if (mesh) {
                 this.applyToMesh(mesh);
             }
+        }
+
+        public hasAlias(alias: string) {
+            if (!this._aliases) {
+                return false;
+            }
+
+            for (var index = 0; index < this._aliases.length; index++) {
+                if (this._aliases[index] === alias) return true;
+            }
+            return false;
+        }
+
+        public addAlias(alias: string) {
+            if (this.hasAlias(alias)) {
+                return;
+            }
+
+            this._aliases = this._aliases || [];
+            this._aliases.push(alias);
         }
 
         public getScene(): Scene {
