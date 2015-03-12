@@ -84,9 +84,9 @@ namespace Max2Babylon
         }
 
         private int bonesCount;
-        private void ExportMesh(IIGameScene scene, IIGameNode meshNode, BabylonScene babylonScene)
+        private void ExportMesh(IIGameScene scene, IIGameNode meshNode, BabylonScene babylonScene, BabylonMesh sourceMesh = null)
         {
-            if (meshNode.MaxNode.IsInstance())
+            if (meshNode.MaxNode.IsInstance() || meshNode.MaxNode.IsReference())
             {
                 return;
             }
@@ -122,7 +122,7 @@ namespace Max2Babylon
             babylonMesh.alphaIndex = (int)meshNode.MaxNode.GetFloatProperty("babylonjs_alphaindex", 1000);
 
             // Actions
-            babylonMesh.actions = ExportNodeAction(meshNode);
+            //babylonMesh.actions = ExportNodeAction(meshNode);
 
             // Collisions
             babylonMesh.checkCollisions = meshNode.MaxNode.GetBoolProperty("babylonjs_checkcollisions");
@@ -312,85 +312,117 @@ namespace Max2Babylon
 
                 RaiseMessage(string.Format("{0} vertices, {1} faces", vertices.Count, indices.Count / 3), 2);
 
-                // Buffers
-                babylonMesh.positions = vertices.SelectMany(v => new[] { v.Position.X, v.Position.Y, v.Position.Z }).ToArray();
-                babylonMesh.normals = vertices.SelectMany(v => new[] { v.Normal.X, v.Normal.Y, v.Normal.Z }).ToArray();
-                if (hasUV)
+                // Geometry
+                if (sourceMesh == null)
                 {
-                    babylonMesh.uvs = vertices.SelectMany(v => new[] { v.UV.X, 1 - v.UV.Y }).ToArray();
-                }
-                if (hasUV2)
-                {
-                    babylonMesh.uvs2 = vertices.SelectMany(v => new[] { v.UV2.X, 1 - v.UV2.Y }).ToArray();
-                }
+                    babylonMesh.geometryId = Guid.NewGuid().ToString();
 
-                if (skin != null)
-                {
-                    babylonMesh.matricesWeights = vertices.SelectMany(v => v.Weights.ToArray()).ToArray();
-                    babylonMesh.matricesIndices = vertices.Select(v => v.BonesIndices).ToArray();
-                }
+                    var vertexData = new BabylonVertexData { id = babylonMesh.geometryId };
+                    {
+                        // Buffers
+                        vertexData.positions = vertices.SelectMany(v => new[] { v.Position.X, v.Position.Y, v.Position.Z }).ToArray();
+                        vertexData.normals = vertices.SelectMany(v => new[] { v.Normal.X, v.Normal.Y, v.Normal.Z }).ToArray();
+                        if (hasUV)
+                        {
+                            vertexData.uvs = vertices.SelectMany(v => new[] { v.UV.X, 1 - v.UV.Y }).ToArray();
+                        }
+                        if (hasUV2)
+                        {
+                            vertexData.uvs2 = vertices.SelectMany(v => new[] { v.UV2.X, 1 - v.UV2.Y }).ToArray();
+                        }
 
-                if (hasColor)
+                        if (skin != null)
+                        {
+                            vertexData.matricesWeights = vertices.SelectMany(v => v.Weights.ToArray()).ToArray();
+                            vertexData.matricesIndices = vertices.Select(v => v.BonesIndices).ToArray();
+                        }
+
+                        if (hasColor)
+                        {
+                            vertexData.colors = vertices.SelectMany(v => v.Color.ToArray()).ToArray();
+                            vertexData.hasVertexAlpha = hasAlpha;
+                        }
+
+                        // Buffers - Indices
+                        vertexData.indices = indices.ToArray();
+                    }
+
+                    babylonScene.geometries.VertexDataList.Add(vertexData);
+                }
+                else
                 {
-                    babylonMesh.colors = vertices.SelectMany(v => v.Color.ToArray()).ToArray();
-                    babylonMesh.hasVertexAlpha = hasAlpha;
+                    babylonMesh.geometryId = sourceMesh.geometryId;
                 }
 
                 babylonMesh.subMeshes = subMeshes.ToArray();
-
-                // Buffers - Indices
-                babylonMesh.indices = indices.ToArray();
-
             }
 
             // Instances
-            var tabs = Loader.Global.NodeTab.Create();
-
-            Loader.Global.IInstanceMgr.InstanceMgr.GetInstances(meshNode.MaxNode, tabs);
-            var instances = new List<BabylonAbstractMesh>();
-
-            for (var index = 0; index < tabs.Count; index++)
+            if (sourceMesh == null)
             {
-                var indexer = new IntPtr(index);
-                var tab = tabs[indexer];
+                var tabs = Loader.Global.NodeTab.Create();
 
-                Marshal.FreeHGlobal(indexer);
+                Loader.Global.IInstanceMgr.InstanceMgr.GetInstances(meshNode.MaxNode, tabs);
+                var instances = new List<BabylonAbstractMesh>();
 
-                if (meshNode.MaxNode.GetGuid() == tab.GetGuid())
+                for (var index = 0; index < tabs.Count; index++)
                 {
-                    continue;
-                }
-                var instanceGameNode = scene.GetIGameNode(tab);
-                if (instanceGameNode == null)
-                {
-                    continue;
-                }
-                tab.MarkAsInstance();
+                    var indexer = new IntPtr(index);
+                    var tab = tabs[indexer];
 
-                var instance = new BabylonAbstractMesh { name = tab.Name };
-                {
-                    var instanceLocalTM = meshNode.GetObjectTM(0);
+                    Marshal.FreeHGlobal(indexer);
 
-                    var instanceTrans = instanceLocalTM.Translation;
-                    var instanceRotation = instanceLocalTM.Rotation;
-                    var instanceScale = instanceLocalTM.Scaling;
-                    instance.position = new[] { instanceTrans.X, instanceTrans.Y, instanceTrans.Z };
-                    float rotx = 0, roty = 0, rotz = 0;
-                    unsafe
+                    if (meshNode.MaxNode.GetGuid() == tab.GetGuid())
                     {
-                        instanceRotation.GetEuler(new IntPtr(&rotx), new IntPtr(&roty), new IntPtr(&rotz));
+                        continue;
                     }
-                    instance.rotation = new[] { rotx, roty, rotz };
-                    instance.scaling = new[] { instanceScale.X, instanceScale.Y, instanceScale.Z };
+                    var instanceGameNode = scene.GetIGameNode(tab);
+                    if (instanceGameNode == null)
+                    {
+                        continue;
+                    }
+
+                    if (instanceGameNode.MaxNode.ObjectRef is IIDerivedObject)
+                    {
+                        ExportMesh(scene, instanceGameNode, babylonScene, babylonMesh);
+
+                        tab.MarkAsReference();
+                    }
+                    else
+                    {
+                        tab.MarkAsInstance();
+
+                        var instance = new BabylonAbstractMesh { name = tab.Name };
+                        {
+                            var instanceLocalTM = meshNode.GetObjectTM(0);
+
+                            var instanceTrans = instanceLocalTM.Translation;
+                            var instanceRotation = instanceLocalTM.Rotation;
+                            var instanceScale = instanceLocalTM.Scaling;
+                            instance.position = new[] { instanceTrans.X, instanceTrans.Y, instanceTrans.Z };
+                            float rotx = 0, roty = 0, rotz = 0;
+                            unsafe
+                            {
+                                instanceRotation.GetEuler(new IntPtr(&rotx), new IntPtr(&roty), new IntPtr(&rotz));
+                            }
+                            instance.rotation = new[] { rotx, roty, rotz };
+                            instance.scaling = new[] { instanceScale.X, instanceScale.Y, instanceScale.Z };
+
+                            if (instanceGameNode.NodeParent != null)
+                            {
+                                instance.parentId = GetParentID(instanceGameNode.NodeParent, babylonScene, scene);
+                            }
+                        }
+                        var instanceAnimations = new List<BabylonAnimation>();
+                        GenerateCoordinatesAnimations(meshNode, instanceAnimations);
+                        instance.animations = instanceAnimations.ToArray();
+
+                        instances.Add(instance);
+                    }
                 }
-                var instanceAnimations = new List<BabylonAnimation>();
-                GenerateCoordinatesAnimations(meshNode, instanceAnimations);
-                instance.animations = instanceAnimations.ToArray();
 
-                instances.Add(instance);
+                babylonMesh.instances = instances.ToArray();
             }
-
-            babylonMesh.instances = instances.ToArray();
 
             // Animations
             var animations = new List<BabylonAnimation>();

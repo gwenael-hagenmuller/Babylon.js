@@ -49,6 +49,9 @@ namespace BabylonExport.Entities
         public BabylonMesh[] meshes { get; set; }
 
         [DataMember]
+        public BabylonGeometries geometries { get; set; }
+
+        [DataMember]
         public BabylonMaterial[] materials { get; set; }
 
         [DataMember]
@@ -98,6 +101,8 @@ namespace BabylonExport.Entities
             clearColor = new[] { 0.2f, 0.2f, 0.3f };
             ambientColor = new[] {0f, 0f, 0f };
             gravity = new[] {0f, 0f, -0.9f};
+
+            geometries = new BabylonGeometries();
         }
 
         public void Prepare(bool generateDefaultLight = true)
@@ -108,6 +113,8 @@ namespace BabylonExport.Entities
             multiMaterials = MultiMaterialsList.ToArray();
             shadowGenerators = ShadowGeneratorsList.ToArray();
             skeletons = SkeletonsList.ToArray();
+
+            geometries.vertexData = geometries.VertexDataList.ToArray();
 
             if (CamerasList.Count == 0)
             {

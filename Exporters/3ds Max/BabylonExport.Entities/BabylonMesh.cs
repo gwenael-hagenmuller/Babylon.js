@@ -10,9 +10,6 @@ namespace BabylonExport.Entities
         public string id { get; set; }
 
         [DataMember]
-        public string parentId { get; set; }
-
-        [DataMember]
         public string materialId { get; set; }
 
         [DataMember]
@@ -28,31 +25,7 @@ namespace BabylonExport.Entities
         public float[] pivotMatrix { get; set; }
 
         [DataMember]
-        public float[] positions { get; set; }
-
-        [DataMember]
-        public float[] normals { get; set; }
-
-        [DataMember]
-        public float[] uvs { get; set; }
-
-        [DataMember]
-        public float[] uvs2 { get; set; }
-
-        [DataMember]
-        public float[] colors { get; set; }
-
-        [DataMember]
-        public bool hasVertexAlpha { get; set; }
-
-        [DataMember]
-        public int[] matricesIndices { get; set; }
-
-        [DataMember]
-        public float[] matricesWeights { get; set; }
-
-        [DataMember]
-        public int[] indices { get; set; }
+        public string geometryId { get; set; }
 
         [DataMember]
         public bool checkCollisions { get; set; }

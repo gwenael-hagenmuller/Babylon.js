@@ -56,11 +56,14 @@
     <Compile Include="BabylonBone.cs" />
     <Compile Include="BabylonCamera.cs" />
     <Compile Include="BabylonFresnelParameters.cs" />
+    <Compile Include="BabylonGeometries.cs" />
     <Compile Include="BabylonLensFlare.cs" />
     <Compile Include="BabylonLensFlareSystem.cs" />
     <Compile Include="BabylonLight.cs" />
     <Compile Include="BabylonMaterial.cs" />
     <Compile Include="BabylonAbstractMesh.cs" />
+    <Compile Include="BabylonGeometry.cs" />
+    <Compile Include="BabylonVertexData.cs" />
     <Compile Include="BabylonMesh.cs" />
     <Compile Include="BabylonMultiMaterial.cs" />
     <Compile Include="BabylonParticleSystem.cs" />

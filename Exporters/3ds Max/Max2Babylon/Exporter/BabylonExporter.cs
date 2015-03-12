@@ -205,6 +205,7 @@ namespace Max2Babylon
                 Marshal.FreeHGlobal(indexer);
                 ExportMesh(gameScene, meshNode, babylonScene);
 
+                meshNode.MaxNode.UnMark();
 
                 ReportProgressChanged((int)progression);
 
@@ -256,7 +257,7 @@ namespace Max2Babylon
             }
 
             // Actions
-            babylonScene.actions = ExportNodeAction(gameScene.GetIGameNode(rawScene));
+            //babylonScene.actions = ExportNodeAction(gameScene.GetIGameNode(rawScene));
 
             // Output
             RaiseMessage("Saving to output file");

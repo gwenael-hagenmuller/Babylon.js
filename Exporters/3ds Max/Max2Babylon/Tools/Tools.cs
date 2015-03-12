@@ -383,7 +383,64 @@ namespace Max2Babylon
 
         public static void MarkAsInstance(this IAnimatable node)
         {
-            node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 1, new byte[] { 1 });
+            node.Mark(1, new byte[] { 1 });
+        }
+
+        public static bool IsReference(this IAnimatable node)
+        {
+            var data = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 3);
+
+            if (data != null)
+            {
+                return data.Data[0] != 0;
+            }
+
+            return false;
+        }
+
+        public static void MarkAsReference(this IAnimatable node)
+        {
+            node.Mark(3, new byte[] { 1 });
+        }
+
+        public static void Mark(this IAnimatable node, uint sbid, byte[] data)
+        {
+            // store the fact that we store data in sbid
+            var indices = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
+            List<byte> indicesList;
+
+            if (indices != null)
+            {
+                indicesList = indices.Data.ToList();
+            }
+            else
+            {
+                indicesList = new List<byte> { (byte)sbid };
+            }
+
+            node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2, indicesList.ToArray());
+
+            // store the data
+            node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid, data);
+        }
+
+        public static void UnMark(this IAnimatable node)
+        {
+            // is there something stored?
+            var indices = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
+
+            if (indices == null)
+            {
+                return;
+            }
+
+            var data = indices.Data;
+            for (var i = 0; i < data.Length; ++i)
+            {
+                node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, data[i]);
+            }
+
+            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
         }
 
         public static Guid GetGuid(this IAnimatable node)
