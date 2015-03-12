@@ -260,6 +260,9 @@
         private _debugLayer: DebugLayer;
 
         private _depthRenderer: DepthRenderer;
+        
+        // friendly with GeometriesLoader
+        public _geometriesLoader: GeometriesLoader;
 
         /**
          * @constructor
@@ -1763,6 +1766,11 @@
             // Physics
             if (this._physicsEngine) {
                 this.disablePhysicsEngine();
+            }
+            
+            // GeometriesLoader
+            if (this._geometriesLoader) {
+                this._geometriesLoader.dispose();
             }
 
             // Remove from engine
