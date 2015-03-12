@@ -211,9 +211,18 @@ namespace Max2Babylon
 
                 progression += progressionStep;
 
-                CheckCancelled();
+                try
+                {
+                    CheckCancelled();
+                }
+                catch (Exception e)
+                {
+                    UnMark(meshes, ix + 1);
+                    throw e;
+                }
             }
 
+            UnMark(meshes, meshes.Count);
 
             // Materials
             RaiseMessage("Exporting materials");
@@ -296,6 +305,17 @@ namespace Max2Babylon
             RaiseMessage(string.Format("Exportation done in {0:0.00}s", watch.ElapsedMilliseconds / 1000.0), Color.Blue);
         }
 
+        private static void UnMark(ITab<IIGameNode> meshes, int length)
+        {
+            for (int ix = 0; ix < length; ++ix)
+            {
+                var indexer = new IntPtr(ix);
+                var meshNode = meshes[indexer];
+                Marshal.FreeHGlobal(indexer);
+
+                meshNode.MaxNode.UnMark();
+            }
+        }
 
     }
 }

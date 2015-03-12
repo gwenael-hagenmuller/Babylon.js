@@ -84,7 +84,7 @@ namespace Max2Babylon
         }
 
         private int bonesCount;
-        private void ExportMesh(IIGameScene scene, IIGameNode meshNode, BabylonScene babylonScene, BabylonMesh sourceMesh = null)
+        private void ExportMesh(IIGameScene scene, IIGameNode meshNode, BabylonScene babylonScene, BabylonMesh sourceMesh = null, bool doNotExportInstances = false)
         {
             if (meshNode.MaxNode.IsInstance() || meshNode.MaxNode.IsReference())
             {
@@ -358,7 +358,7 @@ namespace Max2Babylon
             }
 
             // Instances
-            if (sourceMesh == null)
+            if (!doNotExportInstances)
             {
                 var tabs = Loader.Global.NodeTab.Create();
 
@@ -384,7 +384,14 @@ namespace Max2Babylon
 
                     if (instanceGameNode.MaxNode.ObjectRef is IIDerivedObject)
                     {
-                        ExportMesh(scene, instanceGameNode, babylonScene, babylonMesh);
+                        var derivedObject = instanceGameNode.MaxNode.ObjectRef as IIDerivedObject;
+                        var modifiers = derivedObject.Modifiers;
+                        var newGeometry = modifiers != null && modifiers.Count > 0;
+
+                        // if there is at least an extra modifier then we consider that it doesn't share
+                        // the geometry with the source mesh
+                        ExportMesh(scene, instanceGameNode, babylonScene,
+                            newGeometry ? null : babylonMesh, true);
 
                         tab.MarkAsReference();
                     }
