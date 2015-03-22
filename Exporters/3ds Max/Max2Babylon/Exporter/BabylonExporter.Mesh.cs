@@ -399,9 +399,9 @@ namespace Max2Babylon
                     {
                         tab.MarkAsInstance();
 
-                        var instance = new BabylonAbstractMesh { name = tab.Name };
+                        var instance = new BabylonAbstractMesh { name = tab.Name, id = instanceGameNode.MaxNode.GetGuid().ToString() };
                         {
-                            var instanceLocalTM = meshNode.GetObjectTM(0);
+                            var instanceLocalTM = instanceGameNode.GetObjectTM(0);
 
                             var instanceTrans = instanceLocalTM.Translation;
                             var instanceRotation = instanceLocalTM.Rotation;

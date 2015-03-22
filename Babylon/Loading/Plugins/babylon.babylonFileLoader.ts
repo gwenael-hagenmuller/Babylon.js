@@ -490,8 +490,28 @@
         return camera;
     };
 
-    var parseMesh = (parsedMesh, scene, rootUrl) => {
-        var mesh = new BABYLON.Mesh(parsedMesh.name, scene);
+    var parseMesh = (parsedMesh, scene: Scene, rootUrl, parsedGeometries, doNotParseInstances?) => {
+
+        var sourceMesh = parsedMesh._sourceMesh;
+        var hasPotentiallyNotImportedInstances = doNotParseInstances && parsedMesh.instances && parsedMesh.instances.length;
+
+        if (!sourceMesh) {
+            if (parsedMesh._sourceMeshId) {
+                sourceMesh = scene.getSourceMeshByID(parsedMesh._sourceMeshId);
+            }
+            else if (hasPotentiallyNotImportedInstances) {
+                sourceMesh = scene.getSourceMeshByID(parsedMesh.id);
+            }
+        }
+
+        if (sourceMesh) {
+            // parsedMesh has information concerning the instance
+            // use of sourceMesh instead of parsedMesh since we are interesting by information of the sourceMesh to create its instance
+            parseInstance(parsedMesh, sourceMesh, sourceMesh);
+            return null; // null to mean that no mesh must be added to the scene
+        }
+
+        var mesh = new BABYLON.Mesh(parsedMesh.name, scene, null, null, false, parsedMesh._sourceMeshId, hasPotentiallyNotImportedInstances);
         mesh.id = parsedMesh.id;
 
         BABYLON.Tags.AddTagsTo(mesh, parsedMesh.tags);
@@ -585,14 +605,16 @@
                 mesh._delayInfo.push(BABYLON.VertexBuffer.MatricesWeightsKind);
             }
 
-            mesh._delayLoadingFunction = importGeometry;
+            mesh._delayLoadingFunction = (parsedGeometry: any, mesh: Mesh) => {
+                return importGeometry(parsedGeometry, mesh, parsedGeometries, rootUrl);
+            };
 
             if (BABYLON.SceneLoader.ForceFullSceneLoadingForIncremental) {
                 mesh._checkDelayState();
             }
 
         } else {
-            importGeometry(parsedMesh, mesh);
+            importGeometry(parsedMesh, mesh, parsedGeometries, rootUrl);
         }
 
         // Material
@@ -637,36 +659,40 @@
         }
 
         // Instances
-        if (parsedMesh.instances) {
+        if (!doNotParseInstances && parsedMesh.instances) {
             for (var index = 0; index < parsedMesh.instances.length; index++) {
                 var parsedInstance = parsedMesh.instances[index];
-                var instance = mesh.createInstance(parsedInstance.name);
-
-                BABYLON.Tags.AddTagsTo(instance, parsedInstance.tags);
-
-                instance.position = BABYLON.Vector3.FromArray(parsedInstance.position);
-
-                if (parsedInstance.rotationQuaternion) {
-                    instance.rotationQuaternion = BABYLON.Quaternion.FromArray(parsedInstance.rotationQuaternion);
-                } else if (parsedInstance.rotation) {
-                    instance.rotation = BABYLON.Vector3.FromArray(parsedInstance.rotation);
-                }
-
-                instance.scaling = BABYLON.Vector3.FromArray(parsedInstance.scaling);
-
-                instance.checkCollisions = mesh.checkCollisions;
-
-                if (parsedMesh.animations) {
-                    for (animationIndex = 0; animationIndex < parsedMesh.animations.length; animationIndex++) {
-                        parsedAnimation = parsedMesh.animations[animationIndex];
-
-                        instance.animations.push(parseAnimation(parsedAnimation));
-                    }
-                }
+                parseInstance(parsedInstance, mesh, parsedMesh);
             }
         }
 
         return mesh;
+    };
+
+    var parseInstance = (parsedInstance, mesh: Mesh, parsedMesh) => {
+        var instance = mesh.createInstance(parsedInstance.name, parsedInstance.id);
+
+        BABYLON.Tags.AddTagsTo(instance, parsedInstance.tags);
+
+        instance.position = BABYLON.Vector3.FromArray(parsedInstance.position);
+
+        if (parsedInstance.rotationQuaternion) {
+            instance.rotationQuaternion = BABYLON.Quaternion.FromArray(parsedInstance.rotationQuaternion);
+        } else if (parsedInstance.rotation) {
+            instance.rotation = BABYLON.Vector3.FromArray(parsedInstance.rotation);
+        }
+
+        instance.scaling = BABYLON.Vector3.FromArray(parsedInstance.scaling);
+
+        instance.checkCollisions = mesh.checkCollisions;
+
+        if (parsedMesh.animations) {
+            for (var animationIndex = 0; animationIndex < parsedMesh.animations.length; animationIndex++) {
+                var parsedAnimation = parsedMesh.animations[animationIndex];
+
+                instance.animations.push(parseAnimation(parsedAnimation));
+            }
+        }
     };
 
     var parseActions = (parsedActions: any, object: AbstractMesh, scene: Scene) => {
@@ -860,30 +886,114 @@
         }
     };
 
-    var isDescendantOf = (mesh, names, hierarchyIds) => {
+    var isDescendantOf = (parsedMeshes, parsedMesh, names, hierarchyIds, lookIntoInstances, scene: Scene) => {
         names = (names instanceof Array) ? names : [names];
-        for (var i in names) {
-            if (mesh.name === names[i]) {
-                hierarchyIds.push(mesh.id);
-                return true;
+
+        for (var i = 0; i < names.length; i++) {
+            var newParsedMesh: any = {};
+            var name = names[i];
+
+            if (parsedMesh.name === name) {
+                parsedMeshes.push(parsedMesh);
+                hierarchyIds.push(parsedMesh.id);
+                continue;
+            }
+
+            if (lookIntoInstances && parsedMesh.instances && parsedMesh.instances.length > 0) {
+                var parsedInstances = parsedMesh.instances;
+                for (var j = 0; j < parsedInstances.length; j++) {
+                    var parsedInstance = parsedInstances[j];
+                    if (parsedInstance.name === name) {
+
+                        var sourceMesh = scene.getSourceMeshByID(parsedMesh.id);
+
+                        if (sourceMesh) { 
+                            Tools.DeepCopy(parsedInstance, newParsedMesh);
+                            newParsedMesh._sourceMesh = sourceMesh;
+                        }
+                        else {
+                            var clonedInstance: any = {};
+                            Tools.DeepCopy(parsedInstance, clonedInstance);
+
+                            parsedInstance = {};
+                            Tools.DeepCopy(parsedMesh, parsedInstance);
+
+                            // todo: use function for this
+                            parsedInstance.id = clonedInstance.id;
+                            parsedInstance.name = clonedInstance.name;
+                            parsedInstance.position = clonedInstance.position;
+                            parsedInstance.rotationQuaternion = clonedInstance.rotationQuaternion;
+                            parsedInstance.rotation = clonedInstance.rotation;
+                            parsedInstance.animations = clonedInstance.animations;
+                            parsedInstance.parentId = clonedInstance.parentId;
+
+                            var clonedMesh: any = {};
+                            Tools.DeepCopy(parsedMesh, clonedMesh);
+
+                            Tools.DeepCopy(clonedInstance, newParsedMesh);
+
+                            newParsedMesh.id = clonedMesh.id;
+                            newParsedMesh.name = clonedMesh.name;
+                            newParsedMesh.position = clonedMesh.position;
+                            newParsedMesh.rotationQuaternion = clonedMesh.rotationQuaternion;
+                            newParsedMesh.rotation = clonedMesh.rotation;
+                            newParsedMesh.animations = clonedMesh.animations;
+                            newParsedMesh.parentId = clonedMesh.parentId;
+
+                            // update instances
+                            parsedInstance.instances.splice(j, 1);
+                            parsedInstance.instances.push(newParsedMesh);
+
+                            var tmp = parsedInstance;
+                            parsedInstance = newParsedMesh;
+                            newParsedMesh = tmp;
+
+                            /*var parsedMeshId = parsedMesh.id;
+
+                            Tools.DeepCopy(newParsedMesh, parsedMesh);*/
+
+                            newParsedMesh._sourceMeshId = parsedMesh.id;
+                        }
+
+                        parsedMeshes.push(newParsedMesh);
+                        hierarchyIds.push(newParsedMesh.id);
+                        break;
+                    }
+                }
             }
         }
+        if (parsedMeshes.length) {
+            parsedMesh = parsedMeshes;
+            return true;
+        }
 
-        if (mesh.parentId && hierarchyIds.indexOf(mesh.parentId) !== -1) {
-            hierarchyIds.push(mesh.id);
+        // todo
+        if (parsedMesh.parentId && hierarchyIds.indexOf(parsedMesh.parentId) !== -1) {
+            parsedMeshes.push(parsedMesh);
+            hierarchyIds.push(parsedMesh.id);
             return true;
         }
 
         return false;
     };
 
-    var importGeometry = (parsedGeometry, mesh) => {
+    var importGeometry = (parsedGeometry, mesh, parsedGeometries?, rootUrl?) => {
         var scene = mesh.getScene();
 
         // Geometry
         var geometryId = parsedGeometry.geometryId;
         if (geometryId) {
+            // first look for the geometry in the scene
             var geometry = scene.getGeometryByID(geometryId);
+
+            // if not found look for it in parsedGeometries and import it
+            if (!geometry && parsedGeometries && rootUrl !== undefined) {
+                if (!scene._geometriesLoader) {
+                    new BABYLON.GeometriesLoader(scene);
+                }
+                geometry = scene._geometriesLoader.importGeometryById(geometryId, parsedGeometries, rootUrl);
+            }
+
             if (geometry) {
                 geometry.applyToMesh(mesh);
             }
@@ -1018,64 +1128,84 @@
         importMesh: (meshesNames: any, scene: Scene, data: any, rootUrl: string, meshes: AbstractMesh[], particleSystems: ParticleSystem[], skeletons: Skeleton[]): boolean => {
             var parsedData = JSON.parse(data);
 
+            var meshesNamesProvided: boolean;
+            if (!meshesNames) {
+                meshesNamesProvided = false;
+            }
+            else {
+                meshesNamesProvided = !(meshesNames instanceof Array) || meshesNames.length > 0;
+            }
+
             var loadedSkeletonsIds = [];
             var loadedMaterialsIds = [];
             var hierarchyIds = [];
             for (var index = 0; index < parsedData.meshes.length; index++) {
                 var parsedMesh = parsedData.meshes[index];
+                var parsedMeshes = [];
 
-                if (!meshesNames || isDescendantOf(parsedMesh, meshesNames, hierarchyIds)) {
+                if (!meshesNames) {
+                    parsedMeshes.push(parsedMesh);
+                }
+
+                if (!meshesNames || isDescendantOf(parsedMeshes, parsedMesh, meshesNames, hierarchyIds, meshesNamesProvided, scene)) {
                     if (meshesNames instanceof Array) {
                         // Remove found mesh name from list.
                         delete meshesNames[meshesNames.indexOf(parsedMesh.name)];
                     }
 
-                    // Material ?
-                    if (parsedMesh.materialId) {
-                        var materialFound = (loadedMaterialsIds.indexOf(parsedMesh.materialId) !== -1);
+                    for (var j = 0; j < parsedMeshes.length; j++) {
+                        var currentParsedMesh = parsedMeshes[j];
 
-                        if (!materialFound) {
-                            for (var multimatIndex = 0; multimatIndex < parsedData.multiMaterials.length; multimatIndex++) {
-                                var parsedMultiMaterial = parsedData.multiMaterials[multimatIndex];
-                                if (parsedMultiMaterial.id == parsedMesh.materialId) {
-                                    for (var matIndex = 0; matIndex < parsedMultiMaterial.materials.length; matIndex++) {
-                                        var subMatId = parsedMultiMaterial.materials[matIndex];
-                                        loadedMaterialsIds.push(subMatId);
-                                        parseMaterialById(subMatId, parsedData, scene, rootUrl);
+                        // Material ?
+                        if (currentParsedMesh.materialId) {
+                            var materialFound = (loadedMaterialsIds.indexOf(currentParsedMesh.materialId) !== -1);
+
+                            if (!materialFound) {
+                                for (var multimatIndex = 0; multimatIndex < parsedData.multiMaterials.length; multimatIndex++) {
+                                    var parsedMultiMaterial = parsedData.multiMaterials[multimatIndex];
+                                    if (parsedMultiMaterial.id == currentParsedMesh.materialId) {
+                                        for (var matIndex = 0; matIndex < parsedMultiMaterial.materials.length; matIndex++) {
+                                            var subMatId = parsedMultiMaterial.materials[matIndex];
+                                            loadedMaterialsIds.push(subMatId);
+                                            parseMaterialById(subMatId, parsedData, scene, rootUrl);
+                                        }
+
+                                        loadedMaterialsIds.push(parsedMultiMaterial.id);
+                                        parseMultiMaterial(parsedMultiMaterial, scene);
+                                        materialFound = true;
+                                        break;
                                     }
+                                }
+                            }
 
-                                    loadedMaterialsIds.push(parsedMultiMaterial.id);
-                                    parseMultiMaterial(parsedMultiMaterial, scene);
-                                    materialFound = true;
-                                    break;
+                            if (!materialFound) {
+                                loadedMaterialsIds.push(currentParsedMesh.materialId);
+                                parseMaterialById(currentParsedMesh.materialId, parsedData, scene, rootUrl);
+                            }
+                        }
+
+                        // Skeleton ?
+                        if (currentParsedMesh.skeletonId > -1 && scene.skeletons) {
+                            var skeletonAlreadyLoaded = (loadedSkeletonsIds.indexOf(currentParsedMesh.skeletonId) > -1);
+
+                            if (!skeletonAlreadyLoaded) {
+                                for (var skeletonIndex = 0; skeletonIndex < parsedData.skeletons.length; skeletonIndex++) {
+                                    var parsedSkeleton = parsedData.skeletons[skeletonIndex];
+
+                                    if (parsedSkeleton.id === currentParsedMesh.skeletonId) {
+                                        skeletons.push(parseSkeleton(parsedSkeleton, scene));
+                                        loadedSkeletonsIds.push(parsedSkeleton.id);
+                                    }
                                 }
                             }
                         }
 
-                        if (!materialFound) {
-                            loadedMaterialsIds.push(parsedMesh.materialId);
-                            parseMaterialById(parsedMesh.materialId, parsedData, scene, rootUrl);
+                        // import instances only if no meshes names are provided
+                        var mesh = parseMesh(currentParsedMesh, scene, rootUrl, parsedData.geometries, meshesNamesProvided);
+                        if (mesh) {// parseMesh returns null if an instance has been added to its source mesh
+                            meshes.push(mesh);
                         }
                     }
-
-                    // Skeleton ?
-                    if (parsedMesh.skeletonId > -1 && scene.skeletons) {
-                        var skeletonAlreadyLoaded = (loadedSkeletonsIds.indexOf(parsedMesh.skeletonId) > -1);
-
-                        if (!skeletonAlreadyLoaded) {
-                            for (var skeletonIndex = 0; skeletonIndex < parsedData.skeletons.length; skeletonIndex++) {
-                                var parsedSkeleton = parsedData.skeletons[skeletonIndex];
-
-                                if (parsedSkeleton.id === parsedMesh.skeletonId) {
-                                    skeletons.push(parseSkeleton(parsedSkeleton, scene));
-                                    loadedSkeletonsIds.push(parsedSkeleton.id);
-                                }
-                            }
-                        }
-                    }
-
-                    var mesh = parseMesh(parsedMesh, scene, rootUrl);
-                    meshes.push(mesh);
                 }
             }
 
@@ -1152,66 +1282,13 @@
             // Geometries
             var geometries = parsedData.geometries;
             if (geometries) {
-            
-                // prepare data for default geometries loader
-                var defaultGeometries: any;
-                defaultGeometries = geometries["default"] = {};
-            
-                // Boxes
-                if (geometries.boxes) {
-                    defaultGeometries.boxes = geometries.boxes;
-                    delete geometries.boxes;
-                }
-
-                // Spheres
-                if (geometries.spheres) {
-                    defaultGeometries.spheres = geometries.spheres;
-                    delete geometries.spheres;
-                }
-
-                // Cylinders
-                if (geometries.cylinders) {
-                    defaultGeometries.cylinders = geometries.cylinders;
-                    delete geometries.cylinders;
-                }
-
-                // Toruses
-                if (geometries.toruses) {
-                    defaultGeometries.toruses = geometries.toruses;
-                    delete geometries.toruses;
-                }
-
-                // Grounds
-                if (geometries.grounds) {
-                    defaultGeometries.grounds = geometries.grounds;
-                    delete geometries.grounds;
-                }
-
-                // Planes
-                if (geometries.planes) {
-                    defaultGeometries.planes = geometries.planes;
-                    delete geometries.planes;
-                }
-
-                // TorusKnots
-                if (geometries.torusKnots) {
-                    defaultGeometries.torusKnots = geometries.torusKnots;
-                    delete geometries.torusKnots;
-                }
-
-                // VertexData
-                if (geometries.vertexData) {
-                    defaultGeometries.vertexData = geometries.vertexData;
-                    delete geometries.vertexData;
-                }
-                
                 (new BABYLON.GeometriesLoader(scene)).importGeometries(geometries, rootUrl);
             }
 
             // Meshes
             for (index = 0; index < parsedData.meshes.length; index++) {
                 var parsedMesh = parsedData.meshes[index];
-                parseMesh(parsedMesh, scene, rootUrl);
+                parseMesh(parsedMesh, scene, rootUrl, geometries);
             }
 
             // Cameras

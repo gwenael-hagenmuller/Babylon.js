@@ -7,8 +7,8 @@
         private _sourceMesh: Mesh;
         private _currentLOD: Mesh;
 
-        constructor(name: string, source: Mesh) {
-            super(name, source.getScene());
+        constructor(name: string, source: Mesh, id?: string) {
+            super(name, source.getScene(), id);
 
             source.instances.push(this);
 

@@ -36,6 +36,10 @@
         public _binaryInfo: any;
         private _LODLevels = new Array<Internals.MeshLODLevel>();
 
+        public get sourceMeshId(): string {
+            return this._sourceMeshId;
+        }
+
         // Private
         public _geometry: Geometry;
         private _onBeforeRenderCallbacks = new Array<(mesh: AbstractMesh) => void>();
@@ -50,6 +54,7 @@
         private _instancesBufferSize = 32 * 16 * 4; // let's start with a maximum of 32 instances
         public _shouldGenerateFlatShading: boolean;
         private _preActivateId: number;
+        private _sourceMeshId: string; // the id of the source mesh as stored in the file (used when an instance is imported without its source mesh)
 
         /**
          * @constructor
@@ -60,8 +65,9 @@
          * @param {boolean} doNotCloneChildren - When cloning, skip cloning child meshes of source, default False.
          *                  When false, achieved by calling a clone(), also passing False.
          *                  This will make creation of children, recursive.
+         * @param {string} sourceMeshId - The id of the source mesh as stored in the file (used when an instance is imported without its source mesh). Optional.
          */
-        constructor(name: string, scene: Scene, parent: Node = null, source?: Mesh, doNotCloneChildren?: boolean) {
+        constructor(name: string, scene: Scene, parent: Node = null, source?: Mesh, doNotCloneChildren?: boolean, sourceMeshId?: string, hasPotentiallyInstancesNotLoaded?: boolean) {
             super(name, scene);
 
             if (source) {
@@ -104,6 +110,13 @@
                 this.parent = parent;
             }
 
+            if (sourceMeshId) {
+                this._sourceMeshId = sourceMeshId;
+                scene.addSourceMesh(this);
+            }
+            else if (hasPotentiallyInstancesNotLoaded) {
+                scene.addSourceMesh(this);
+            }
         }
 
         // Methods
@@ -1061,8 +1074,8 @@
         }
 
         // Instances
-        public createInstance(name: string): InstancedMesh {
-            return new InstancedMesh(name, this);
+        public createInstance(name: string, id?: string): InstancedMesh {
+            return new InstancedMesh(name, this, id);
         }
 
         public synchronizeInstances(): void {

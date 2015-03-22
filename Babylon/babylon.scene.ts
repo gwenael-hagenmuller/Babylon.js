@@ -124,6 +124,7 @@
         * @type {BABYLON.AbstractMesh[]}
         */
         public meshes = new Array<AbstractMesh>();
+        private _sourceMeshes: Array<Mesh>;
         public onNewMeshAdded: (newMesh?: AbstractMesh, positionInArray?: number, scene?: Scene) => void;
         public onMeshRemoved: (removedMesh?: AbstractMesh) => void;
 
@@ -261,7 +262,7 @@
 
         private _depthRenderer: DepthRenderer;
         
-        // friendly with GeometriesLoader
+        // friendly with GeometriesLoader and file loader
         public _geometriesLoader: GeometriesLoader;
 
         /**
@@ -948,6 +949,35 @@
             }
 
             return null;
+        }
+
+        /**
+         * Get a the first added source mesh found of a given ID
+         * @param {string} id - the id to search for
+         * @return {BABYLON.Mesh|null} the mesh found or null if not found at all.
+         */
+        public getSourceMeshByID(sourceMeshId: string): Mesh {
+            if (!this._sourceMeshes) {
+                return null;
+            }
+
+            for (var index = 0; index < this._sourceMeshes.length; index++) {
+                var mesh = this._sourceMeshes[index];
+                if (mesh.sourceMeshId === sourceMeshId || mesh.id === sourceMeshId) {
+                    return mesh;
+                }
+            }
+
+            return null;
+        }
+
+        public addSourceMesh(mesh: Mesh): void {
+            this._sourceMeshes = this._sourceMeshes || new Array<Mesh>();
+            if (this.getSourceMeshByID(mesh.sourceMeshId)) {
+                return;
+            }
+
+            this._sourceMeshes.push(mesh);
         }
 
         /**
@@ -1974,7 +2004,7 @@
             return this._physicsEngine;
         }
 
-        public enablePhysics(gravity: Vector3, plugin?: IPhysicsEnginePlugin): boolean {
+        public enablePhysics(gravity?: Vector3, plugin?: IPhysicsEnginePlugin): boolean {
             if (this._physicsEngine) {
                 return true;
             }

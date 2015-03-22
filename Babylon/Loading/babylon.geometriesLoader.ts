@@ -2,6 +2,7 @@
     export interface IGeometriesLoaderPlugin {
         id: string;
         newOrDefaultInstance: () => IGeometriesLoaderPlugin;
+        importGeometryById: (geometryId: number, geometries: any, scene: Scene, rootUrl: string) => Geometry;
         importGeometries: (geometries: any, scene: Scene, rootUrl: string) => boolean;
         dispose: () => void;
     }
@@ -21,8 +22,30 @@
             GeometriesLoader._registeredPlugins[plugin.id] = plugin;
         }
 
+        public importGeometryById(geometryId: number, geometries: any, rootUrl: string): Geometry {
+            var geometry: Geometry;
+
+            GeometriesLoader._prepareGeometries(geometries);
+
+            for (var geometriesLoaderPluginId in geometries) {
+                var plugin = GeometriesLoader._getPluginForGeometries(geometriesLoaderPluginId, this.scene);
+
+                if (!plugin) {
+                    continue;
+                }
+
+                var geometriesForPlugin = geometries[geometriesLoaderPluginId];
+
+                geometry = plugin.importGeometryById(geometryId, geometriesForPlugin, this.scene, rootUrl);
+            }
+
+            return geometry;
+        }
+
         public importGeometries(geometries: any, rootUrl: string): boolean {
             var result = true;
+
+            GeometriesLoader._prepareGeometries(geometries);
 
             for (var geometriesLoaderPluginId in geometries) {
                 var plugin = GeometriesLoader._getPluginForGeometries(geometriesLoaderPluginId, this.scene);
@@ -38,6 +61,65 @@
             }
 
             return result;
+        }
+
+        public static _prepareGeometries(geometries) {
+
+            if (!geometries) {
+                return;
+            }
+
+            // prepare data for default geometries loader
+            var defaultGeometries: any;
+            defaultGeometries = geometries["default"] = geometries["default"] || {};
+
+            // Boxes
+            if (geometries.boxes) {
+                defaultGeometries.boxes = geometries.boxes;
+                delete geometries.boxes;
+            }
+
+            // Spheres
+            if (geometries.spheres) {
+                defaultGeometries.spheres = geometries.spheres;
+                delete geometries.spheres;
+            }
+
+            // Cylinders
+            if (geometries.cylinders) {
+                defaultGeometries.cylinders = geometries.cylinders;
+                delete geometries.cylinders;
+            }
+
+            // Toruses
+            if (geometries.toruses) {
+                defaultGeometries.toruses = geometries.toruses;
+                delete geometries.toruses;
+            }
+
+            // Grounds
+            if (geometries.grounds) {
+                defaultGeometries.grounds = geometries.grounds;
+                delete geometries.grounds;
+            }
+
+            // Planes
+            if (geometries.planes) {
+                defaultGeometries.planes = geometries.planes;
+                delete geometries.planes;
+            }
+
+            // TorusKnots
+            if (geometries.torusKnots) {
+                defaultGeometries.torusKnots = geometries.torusKnots;
+                delete geometries.torusKnots;
+            }
+
+            // VertexData
+            if (geometries.vertexData) {
+                defaultGeometries.vertexData = geometries.vertexData;
+                delete geometries.vertexData;
+            }
         }
 
         public static ParseGeometry(parsedGeometry: any, scene: Scene): BABYLON.Geometry {

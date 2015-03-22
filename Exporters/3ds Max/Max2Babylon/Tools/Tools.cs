@@ -371,24 +371,27 @@ namespace Max2Babylon
 
         public static bool IsInstance(this IAnimatable node)
         {
-            var data = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 1);
-
-            if (data != null)
-            {
-                return data.Data[0] != 0;
-            }
-
-            return false;
+            return node.Is(1);
         }
 
         public static void MarkAsInstance(this IAnimatable node)
         {
-            node.Mark(1, new byte[] { 1 });
+            node.MarkAs(1, new byte[] { 1 });
         }
 
         public static bool IsReference(this IAnimatable node)
         {
-            var data = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 3);
+            return node.Is(3);
+        }
+
+        public static void MarkAsReference(this IAnimatable node)
+        {
+            node.MarkAs(3, new byte[] { 1 });
+        }
+
+        private static bool Is(this IAnimatable node, uint sbid)
+        {
+            var data = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
 
             if (data != null)
             {
@@ -398,12 +401,15 @@ namespace Max2Babylon
             return false;
         }
 
-        public static void MarkAsReference(this IAnimatable node)
+        private static void UnMarkAs(this IAnimatable node, uint sbid)
         {
-            node.Mark(3, new byte[] { 1 });
+            if (!node.Is(sbid))
+                return;
+
+            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
         }
 
-        public static void Mark(this IAnimatable node, uint sbid, byte[] data)
+        public static void MarkAs(this IAnimatable node, uint sbid, byte[] data)
         {
             // store the fact that we store data in sbid
             var indices = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
@@ -431,6 +437,8 @@ namespace Max2Babylon
 
             if (indices == null)
             {
+                node.UnMarkAs(1);
+                node.UnMarkAs(3);
                 return;
             }
 

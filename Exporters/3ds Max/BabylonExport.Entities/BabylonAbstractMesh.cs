@@ -9,6 +9,9 @@ namespace BabylonExport.Entities
         public string parentId { get; set; }
 
         [DataMember]
+        public string id { get; set; }
+
+        [DataMember]
         public string name { get; set; }
         
         [DataMember]

@@ -1,4 +1,4 @@
-var __extends = this.__extends || function (d, b) {
+﻿var __extends = this.__extends || function (d, b) {
     for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p];
     function __() { this.constructor = d; }
     __.prototype = b.prototype;
@@ -7,22 +7,29 @@ var __extends = this.__extends || function (d, b) {
 var BABYLON;
 (function (BABYLON) {
     /**
-     * Creates an instance based on a source mesh.
-     */
+    * Creates an instance based on a source mesh.
+    */
     var InstancedMesh = (function (_super) {
         __extends(InstancedMesh, _super);
-        function InstancedMesh(name, source) {
-            _super.call(this, name, source.getScene());
+        function InstancedMesh(name, source, id) {
+            _super.call(this, name, source.getScene(), id);
+
             source.instances.push(this);
+
             this._sourceMesh = source;
+
             this.position.copyFrom(source.position);
             this.rotation.copyFrom(source.rotation);
             this.scaling.copyFrom(source.scaling);
+
             if (source.rotationQuaternion) {
                 this.rotationQuaternion = source.rotationQuaternion.clone();
             }
+
             this.infiniteDistance = source.infiniteDistance;
+
             this.setPivotMatrix(source.getPivotMatrix());
+
             this.refreshBoundingInfo();
             this._syncSubMeshes();
         }
@@ -34,6 +41,7 @@ var BABYLON;
             enumerable: true,
             configurable: true
         });
+
         Object.defineProperty(InstancedMesh.prototype, "material", {
             get: function () {
                 return this._sourceMesh.material;
@@ -41,6 +49,7 @@ var BABYLON;
             enumerable: true,
             configurable: true
         });
+
         Object.defineProperty(InstancedMesh.prototype, "visibility", {
             get: function () {
                 return this._sourceMesh.visibility;
@@ -48,6 +57,7 @@ var BABYLON;
             enumerable: true,
             configurable: true
         });
+
         Object.defineProperty(InstancedMesh.prototype, "skeleton", {
             get: function () {
                 return this._sourceMesh.skeleton;
@@ -55,9 +65,11 @@ var BABYLON;
             enumerable: true,
             configurable: true
         });
+
         InstancedMesh.prototype.getTotalVertices = function () {
             return this._sourceMesh.getTotalVertices();
         };
+
         Object.defineProperty(InstancedMesh.prototype, "sourceMesh", {
             get: function () {
                 return this._sourceMesh;
@@ -65,15 +77,19 @@ var BABYLON;
             enumerable: true,
             configurable: true
         });
+
         InstancedMesh.prototype.getVerticesData = function (kind) {
             return this._sourceMesh.getVerticesData(kind);
         };
+
         InstancedMesh.prototype.isVerticesDataPresent = function (kind) {
             return this._sourceMesh.isVerticesDataPresent(kind);
         };
+
         InstancedMesh.prototype.getIndices = function () {
             return this._sourceMesh.getIndices();
         };
+
         Object.defineProperty(InstancedMesh.prototype, "_positions", {
             get: function () {
                 return this._sourceMesh._positions;
@@ -81,31 +97,40 @@ var BABYLON;
             enumerable: true,
             configurable: true
         });
+
         InstancedMesh.prototype.refreshBoundingInfo = function () {
             var data = this._sourceMesh.getVerticesData(BABYLON.VertexBuffer.PositionKind);
+
             if (data) {
                 var extend = BABYLON.Tools.ExtractMinAndMax(data, 0, this._sourceMesh.getTotalVertices());
                 this._boundingInfo = new BABYLON.BoundingInfo(extend.minimum, extend.maximum);
             }
+
             this._updateBoundingInfo();
         };
+
         InstancedMesh.prototype._preActivate = function () {
             if (this._currentLOD) {
                 this._currentLOD._preActivate();
             }
         };
+
         InstancedMesh.prototype._activate = function (renderId) {
             if (this._currentLOD) {
                 this._currentLOD._registerInstanceForRenderId(this, renderId);
             }
         };
+
         InstancedMesh.prototype.getLOD = function (camera) {
             this._currentLOD = this.sourceMesh.getLOD(this.getScene().activeCamera, this.getBoundingInfo().boundingSphere);
+
             if (this._currentLOD === this.sourceMesh) {
                 return this;
             }
+
             return this._currentLOD;
         };
+
         InstancedMesh.prototype._syncSubMeshes = function () {
             this.releaseSubMeshes();
             if (this._sourceMesh.subMeshes) {
@@ -114,36 +139,47 @@ var BABYLON;
                 }
             }
         };
+
         InstancedMesh.prototype._generatePointsArray = function () {
             return this._sourceMesh._generatePointsArray();
         };
+
         // Clone
         InstancedMesh.prototype.clone = function (name, newParent, doNotCloneChildren) {
             var result = this._sourceMesh.createInstance(name);
+
             // Deep copy
             BABYLON.Tools.DeepCopy(this, result, ["name"], []);
+
             // Bounding info
             this.refreshBoundingInfo();
+
             // Parent
             if (newParent) {
                 result.parent = newParent;
             }
+
             if (!doNotCloneChildren) {
                 for (var index = 0; index < this.getScene().meshes.length; index++) {
                     var mesh = this.getScene().meshes[index];
+
                     if (mesh.parent === this) {
                         mesh.clone(mesh.name, result);
                     }
                 }
             }
+
             result.computeWorldMatrix(true);
+
             return result;
         };
+
         // Dispoe
         InstancedMesh.prototype.dispose = function (doNotRecurse) {
             // Remove from mesh
             var index = this._sourceMesh.instances.indexOf(this);
             this._sourceMesh.instances.splice(index, 1);
+
             _super.prototype.dispose.call(this, doNotRecurse);
         };
         return InstancedMesh;

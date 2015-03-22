@@ -196,6 +196,10 @@ namespace Max2Babylon
             ReportProgressChanged(10);
             RaiseMessage("Exporting meshes");
             var meshes = gameScene.GetIGameNodeByType(Autodesk.Max.IGameObject.ObjectTypes.Mesh);
+
+            // clean marking just in case the meshes were not unmarked during previous export
+            UnMark(meshes, meshes.Count);
+
             var progressionStep = 80.0f / meshes.Count;
             var progression = 10.0f;
             for (int ix = 0; ix < meshes.Count; ++ix)

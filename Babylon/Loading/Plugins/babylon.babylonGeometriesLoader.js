@@ -208,11 +208,22 @@
                 return DefaultGeometriesLoaderPlugin.Instance;
             };
 
+            DefaultGeometriesLoaderPlugin.prototype.importGeometryById = function (geometryId, geometries, scene, rootUrl) {
+                return (this._importGeometries(geometries, scene, rootUrl, geometryId));
+            };
+
             DefaultGeometriesLoaderPlugin.prototype.importGeometries = function (geometries, scene, rootUrl) {
+                return (this._importGeometries(geometries, scene, rootUrl));
+            };
+
+            DefaultGeometriesLoaderPlugin.prototype._importGeometries = function (geometries, scene, rootUrl, geometryId) {
+                var byId = geometryId !== undefined;
+
                 if (!geometries) {
-                    return true;
+                    return byId ? undefined : true;
                 }
 
+                var geometry;
                 var index;
 
                 // Boxes
@@ -220,7 +231,10 @@
                 if (boxes) {
                     for (index = 0; index < boxes.length; index++) {
                         var parsedBox = boxes[index];
-                        parseBox(parsedBox, scene);
+                        geometry = parseBox(parsedBox, scene);
+                        if (byId && parsedBox.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -229,7 +243,10 @@
                 if (spheres) {
                     for (index = 0; index < spheres.length; index++) {
                         var parsedSphere = spheres[index];
-                        parseSphere(parsedSphere, scene);
+                        geometry = parseSphere(parsedSphere, scene);
+                        if (byId && parsedSphere.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -238,7 +255,10 @@
                 if (cylinders) {
                     for (index = 0; index < cylinders.length; index++) {
                         var parsedCylinder = cylinders[index];
-                        parseCylinder(parsedCylinder, scene);
+                        geometry = parseCylinder(parsedCylinder, scene);
+                        if (byId && parsedCylinder.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -247,7 +267,10 @@
                 if (toruses) {
                     for (index = 0; index < toruses.length; index++) {
                         var parsedTorus = toruses[index];
-                        parseTorus(parsedTorus, scene);
+                        geometry = parseTorus(parsedTorus, scene);
+                        if (byId && parsedTorus.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -256,7 +279,10 @@
                 if (grounds) {
                     for (index = 0; index < grounds.length; index++) {
                         var parsedGround = grounds[index];
-                        parseGround(parsedGround, scene);
+                        geometry = parseGround(parsedGround, scene);
+                        if (byId && parsedGround.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -265,7 +291,10 @@
                 if (planes) {
                     for (index = 0; index < planes.length; index++) {
                         var parsedPlane = planes[index];
-                        parsePlane(parsedPlane, scene);
+                        geometry = parsePlane(parsedPlane, scene);
+                        if (byId && parsedPlane.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -274,7 +303,10 @@
                 if (torusKnots) {
                     for (index = 0; index < torusKnots.length; index++) {
                         var parsedTorusKnot = torusKnots[index];
-                        parseTorusKnot(parsedTorusKnot, scene);
+                        geometry = parseTorusKnot(parsedTorusKnot, scene);
+                        if (byId && parsedTorusKnot.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
@@ -283,11 +315,14 @@
                 if (vertexData) {
                     for (index = 0; index < vertexData.length; index++) {
                         var parsedVertexData = vertexData[index];
-                        parseVertexData(parsedVertexData, scene, rootUrl);
+                        geometry = parseVertexData(parsedVertexData, scene, rootUrl);
+                        if (byId && parsedVertexData.id === geometryId) {
+                            return geometry;
+                        }
                     }
                 }
 
-                return true;
+                return byId ? undefined : true;
             };
 
             DefaultGeometriesLoaderPlugin.prototype.dispose = function () {

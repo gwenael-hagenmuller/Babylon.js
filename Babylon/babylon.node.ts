@@ -29,9 +29,9 @@
          * @param {string} name - the name and id to be given to this node
          * @param {BABYLON.Scene} the scene this node will be added to
          */
-        constructor(name: string, scene: Scene) {
+        constructor(name: string, scene: Scene, id?: string) {
             this.name = name;
-            this.id = name;
+            this.id = id || name;
             this._scene = scene;
             this._initCache();
         }

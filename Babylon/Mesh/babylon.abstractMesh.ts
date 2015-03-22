@@ -110,8 +110,8 @@
         // Loading properties
         public _waitingActions: any;
 
-        constructor(name: string, scene: Scene) {
-            super(name, scene);
+        constructor(name: string, scene: Scene, id?: string) {
+            super(name, scene, id);
 
             scene.addMesh(this);
         }

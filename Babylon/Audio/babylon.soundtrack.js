@@ -1,4 +1,4 @@
-var BABYLON;
+﻿var BABYLON;
 (function (BABYLON) {
     var SoundTrack = (function () {
         function SoundTrack(scene, options) {
@@ -10,6 +10,7 @@ var BABYLON;
             if (this._audioEngine.canUseWebAudio) {
                 this._trackGain = this._audioEngine.audioContext.createGain();
                 this._trackGain.connect(this._audioEngine.masterGain);
+
                 if (options) {
                     if (options.volume) {
                         this._trackGain.gain.value = options.volume;
@@ -36,6 +37,7 @@ var BABYLON;
                 this._trackGain = null;
             }
         };
+
         SoundTrack.prototype.AddSound = function (sound) {
             if (BABYLON.Engine.audioEngine.canUseWebAudio) {
                 sound.connectToSoundTrackAudioNode(this._trackGain);
@@ -43,25 +45,28 @@ var BABYLON;
             if (sound.soundTrackId) {
                 if (sound.soundTrackId === -1) {
                     this._scene.mainSoundTrack.RemoveSound(sound);
-                }
-                else {
+                } else {
                     this._scene.soundTracks[sound.soundTrackId].RemoveSound(sound);
                 }
             }
+
             this.soundCollection.push(sound);
             sound.soundTrackId = this.id;
         };
+
         SoundTrack.prototype.RemoveSound = function (sound) {
             var index = this.soundCollection.indexOf(sound);
             if (index !== -1) {
                 this.soundCollection.splice(index, 1);
             }
         };
+
         SoundTrack.prototype.setVolume = function (newVolume) {
             if (this._audioEngine.canUseWebAudio) {
                 this._trackGain.gain.value = newVolume;
             }
         };
+
         SoundTrack.prototype.switchPanningModelToHRTF = function () {
             if (BABYLON.Engine.audioEngine.canUseWebAudio) {
                 for (var i = 0; i < this.soundCollection.length; i++) {
@@ -69,6 +74,7 @@ var BABYLON;
                 }
             }
         };
+
         SoundTrack.prototype.switchPanningModelToEqualPower = function () {
             if (BABYLON.Engine.audioEngine.canUseWebAudio) {
                 for (var i = 0; i < this.soundCollection.length; i++) {
@@ -76,6 +82,7 @@ var BABYLON;
                 }
             }
         };
+
         SoundTrack.prototype.connectToAnalyser = function (analyser) {
             if (this._connectedAnalyser) {
                 this._connectedAnalyser.stopDebugCanvas();

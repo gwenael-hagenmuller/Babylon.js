@@ -11,7 +11,7 @@
     // Screenshots
     var screenshotCanvas: HTMLCanvasElement;
 
-    var cloneValue = (source, destinationObject) => {
+    var cloneValue = (source, destinationObject, doNotCopyList?: string[], mustCopyList?: string[]) => {
         if (!source)
             return null;
 
@@ -24,7 +24,10 @@
         } else if (source.clone) {
             return source.clone();
         }
-        return null;
+
+        var clonedValue = {};
+        Tools.DeepCopy(source, clonedValue, doNotCopyList, mustCopyList);
+        return clonedValue;
     };
 
     export class Tools {
@@ -377,7 +380,7 @@
                         if (sourceValue.length > 0) {
                             if (typeof sourceValue[0] == "object") {
                                 for (var index = 0; index < sourceValue.length; index++) {
-                                    var clonedValue = cloneValue(sourceValue[index], destination);
+                                    var clonedValue = cloneValue(sourceValue[index], destination, doNotCopyList, mustCopyList);
 
                                     if (destination[prop].indexOf(clonedValue) === -1) { // Test if auto inject was not done
                                         destination[prop].push(clonedValue);
@@ -388,7 +391,7 @@
                             }
                         }
                     } else {
-                        destination[prop] = cloneValue(sourceValue, destination);
+                        destination[prop] = cloneValue(sourceValue, destination, doNotCopyList, mustCopyList);
                     }
                 } else {
                     destination[prop] = sourceValue;
