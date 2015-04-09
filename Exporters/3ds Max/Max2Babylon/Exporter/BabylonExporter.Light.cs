@@ -8,11 +8,11 @@ namespace Max2Babylon
 {
     partial class BabylonExporter
     {
-        void ExportDefaultLight(BabylonScene babylonScene)
+        void ExportDefaultLight(BabylonScene babylonScene, string defaultLightId)
         {
             var babylonLight = new BabylonLight();
             babylonLight.name = "Default light";
-            babylonLight.id = Guid.NewGuid().ToString();
+            babylonLight.id = defaultLightId;
             babylonLight.type = 3;
             babylonLight.groundColor = new float[] { 0, 0, 0 };
             babylonLight.direction = new[] { 0, 1.0f, 0 };
@@ -38,7 +38,7 @@ namespace Max2Babylon
 
             RaiseMessage(lightNode.Name, 1);
             babylonLight.name = lightNode.Name;
-            babylonLight.id = lightNode.MaxNode.GetGuid().ToString();
+            babylonLight.id = lightNode.MaxNode.GetGuid();
             if (lightNode.NodeParent != null)
             {
                 babylonLight.parentId = GetParentID(lightNode.NodeParent, babylonScene, scene);
@@ -131,11 +131,11 @@ namespace Max2Babylon
                         {
                             if (inclusion)
                             {
-                                incllist.Add(meshNode.GetGuid().ToString());
+                                incllist.Add(meshNode.GetGuid());
                             }
                             else
                             {
-                                excllist.Add(meshNode.GetGuid().ToString());
+                                excllist.Add(meshNode.GetGuid());
                             }
                         }
                     }

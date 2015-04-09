@@ -20,7 +20,7 @@ namespace Max2Babylon
 
             RaiseMessage(cameraNode.Name, 1);
             babylonCamera.name = cameraNode.Name;
-            babylonCamera.id = cameraNode.MaxNode.GetGuid().ToString();
+            babylonCamera.id = cameraNode.MaxNode.GetGuid();
             if (cameraNode.NodeParent != null)
             {
                 babylonCamera.parentId = GetParentID(cameraNode.NodeParent, babylonScene, scene);
@@ -70,7 +70,7 @@ namespace Max2Babylon
             var target = gameCamera.CameraTarget;
             if (target != null)
             {
-                babylonCamera.lockedTargetId = target.MaxNode.GetGuid().ToString();
+                babylonCamera.lockedTargetId = target.MaxNode.GetGuid();
             }
             else
             {

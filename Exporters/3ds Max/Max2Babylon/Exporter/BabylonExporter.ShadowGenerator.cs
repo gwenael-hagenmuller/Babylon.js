@@ -13,7 +13,7 @@ namespace Max2Babylon
 
             RaiseMessage("Exporting shadow map", 2);
 
-            babylonShadowGenerator.lightId = lightNode.GetGuid().ToString();
+            babylonShadowGenerator.lightId = lightNode.GetGuid();
 
             babylonShadowGenerator.mapSize = maxLight.GetMapSize(0, Tools.Forever);
             babylonShadowGenerator.usePoissonSampling = maxLight.AbsMapBias >= 1;
@@ -31,7 +31,7 @@ namespace Max2Babylon
 
                     if (!checkExclusionList || (inList && inclusion) || (!inList && !inclusion))
                     {
-                        list.Add(meshNode.GetGuid().ToString());
+                        list.Add(meshNode.GetGuid());
                     }
                 }
             }

@@ -12,7 +12,7 @@ namespace Max2Babylon
         private void ExportMaterial(IIGameMaterial materialNode, BabylonScene babylonScene)
         {
             var name = materialNode.MaterialName;
-            var id = materialNode.MaxMaterial.GetGuid().ToString();
+            var id = materialNode.MaxMaterial.GetGuid();
 
             RaiseMessage(name, 1);
 
@@ -28,7 +28,7 @@ namespace Max2Babylon
 
                     if (subMat != null)
                     {
-                        guids.Add(subMat.MaxMaterial.GetGuid().ToString());
+                        guids.Add(subMat.MaxMaterial.GetGuid());
 
                         if (!referencedMaterials.Contains(subMat))
                         {

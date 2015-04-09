@@ -105,7 +105,7 @@ namespace BabylonExport.Entities
             geometries = new BabylonGeometries();
         }
 
-        public void Prepare(bool generateDefaultLight = true)
+        public void Prepare(string defaultCameraId, string defaultLightId = "", bool generateDefaultLight = true)
         {
             meshes = MeshesList.ToArray();
 
@@ -118,7 +118,7 @@ namespace BabylonExport.Entities
 
             if (CamerasList.Count == 0)
             {
-                var camera = new BabylonCamera {name = "Default camera", id = Guid.NewGuid().ToString()};
+                var camera = new BabylonCamera { name = "Default camera", id = defaultCameraId };
 
                 var distanceVector = MaxVector - MinVector;
                 var midPoint = MinVector +distanceVector / 2;
@@ -136,7 +136,7 @@ namespace BabylonExport.Entities
 
             if (LightsList.Count == 0 && generateDefaultLight)
             {
-                var light = new BabylonLight {name = "Default light", id = Guid.NewGuid().ToString()};
+                var light = new BabylonLight { name = "Default light", id = defaultLightId == string.Empty ? Guid.NewGuid().ToString() : defaultLightId };
 
                 var midPoint = MinVector + (MaxVector - MinVector) / 2;
                 light.type = 0;

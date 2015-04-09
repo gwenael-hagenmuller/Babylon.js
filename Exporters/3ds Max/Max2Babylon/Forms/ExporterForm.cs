@@ -25,13 +25,13 @@ namespace Max2Babylon
 
         private void ExporterForm_Load(object sender, EventArgs e)
         {
-            txtFilename.Text = Loader.Core.RootNode.GetLocalData();
+            txtFilename.Text = Tools.GetPath();
             Tools.PrepareCheckBox(chkManifest, Loader.Core.RootNode, "babylonjs_generatemanifest");
             Tools.PrepareCheckBox(chkCopyTextures, Loader.Core.RootNode, "babylonjs_copytextures", 1);
             Tools.PrepareCheckBox(chkHidden, Loader.Core.RootNode, "babylonjs_exporthidden");
             Tools.PrepareCheckBox(chkAutoSave, Loader.Core.RootNode, "babylonjs_autosave", 1);
             Tools.PrepareCheckBox(chkOnlySelected, Loader.Core.RootNode, "babylonjs_onlySelected");
-            Tools.PrepareCheckBox(chkBinary, Loader.Core.RootNode, "babylonjs_binary"); 
+            Tools.PrepareCheckBox(chkBinary, Loader.Core.RootNode, "babylonjs_binary");
         }
 
         private void butBrowse_Click(object sender, EventArgs e)
@@ -56,7 +56,7 @@ namespace Max2Babylon
             Tools.UpdateCheckBox(chkOnlySelected, Loader.Core.RootNode, "babylonjs_onlySelected");
             Tools.UpdateCheckBox(chkBinary, Loader.Core.RootNode, "babylonjs_binary");
 
-            Loader.Core.RootNode.SetLocalData(txtFilename.Text);
+            Tools.SetPath(txtFilename.Text);
 
             exporter = new BabylonExporter();
 

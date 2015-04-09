@@ -64,7 +64,7 @@ namespace Max2Babylon
         private string GetParentID(IIGameNode parentNode, BabylonScene babylonScene, IIGameScene scene)
         {
             var parentType = parentNode.IGameObject.IGameType;
-            var parentId = parentNode.MaxNode.GetGuid().ToString();
+            var parentId = parentNode.MaxNode.GetGuid();
             switch (parentType)
             {
                 case Autodesk.Max.IGameObject.ObjectTypes.Light:
@@ -105,7 +105,7 @@ namespace Max2Babylon
             bool initialized = gameMesh.InitializeData; //needed, the property is in fact a method initializing the exporter that has wrongly been auto 
             // translated into a property because it has no parameters
 
-            var babylonMesh = new BabylonMesh { name = meshNode.Name, id = meshNode.MaxNode.GetGuid().ToString() };
+            var babylonMesh = new BabylonMesh { name = meshNode.Name, id = meshNode.MaxNode.GetGuid() };
 
             if (meshNode.NodeParent != null)
             {
@@ -211,7 +211,7 @@ namespace Max2Babylon
 
                 if (mtl != null)
                 {
-                    babylonMesh.materialId = mtl.MaxMaterial.GetGuid().ToString();
+                    babylonMesh.materialId = mtl.MaxMaterial.GetGuid();
 
                     if (!referencedMaterials.Contains(mtl))
                     {
@@ -315,7 +315,7 @@ namespace Max2Babylon
                 // Geometry
                 if (sourceMesh == null)
                 {
-                    babylonMesh.geometryId = Guid.NewGuid().ToString();
+                    babylonMesh.geometryId = meshNode.MaxNode.GetGeometryId(); // use the same id as the mesh if not already set (it's ok since mesh and geometry are not of same kind)
 
                     var vertexData = new BabylonVertexData { id = babylonMesh.geometryId };
                     {
@@ -352,6 +352,7 @@ namespace Max2Babylon
                 else
                 {
                     babylonMesh.geometryId = sourceMesh.geometryId;
+                    meshNode.MaxNode.SetGeometryId(babylonMesh.geometryId);
                 }
 
                 babylonMesh.subMeshes = subMeshes.ToArray();
@@ -382,7 +383,7 @@ namespace Max2Babylon
                         continue;
                     }
 
-                    if (instanceGameNode.MaxNode.ObjectRef is IIDerivedObject)
+                    /*if (instanceGameNode.MaxNode.ObjectRef is IIDerivedObject)
                     {
                         var derivedObject = instanceGameNode.MaxNode.ObjectRef as IIDerivedObject;
                         var modifiers = derivedObject.Modifiers;
@@ -395,13 +396,18 @@ namespace Max2Babylon
 
                         tab.MarkAsReference();
                     }
-                    else
+                    else*/
                     {
                         tab.MarkAsInstance();
 
-                        var instance = new BabylonAbstractMesh { name = tab.Name, id = instanceGameNode.MaxNode.GetGuid().ToString() };
+                        var instance = new BabylonAbstractMesh { name = tab.Name, id = instanceGameNode.MaxNode.GetGuid() };
                         {
                             var instanceLocalTM = instanceGameNode.GetObjectTM(0);
+                            if (instanceGameNode.NodeParent != null)
+                            {
+                                var parentWorld = instanceGameNode.NodeParent.GetObjectTM(0);
+                                instanceLocalTM.MultiplyBy(parentWorld.Inverse);
+                            }
 
                             var instanceTrans = instanceLocalTM.Translation;
                             var instanceRotation = instanceLocalTM.Rotation;

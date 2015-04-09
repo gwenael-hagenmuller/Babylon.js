@@ -252,7 +252,7 @@ namespace Max2Babylon
             {
                 RaiseWarning("No light defined", 1);
                 RaiseWarning("A default hemispheric light was added for your convenience", 1);
-                ExportDefaultLight(babylonScene);
+                ExportDefaultLight(babylonScene, Tools.GetDefaultLightId());
             }
             else
             {
@@ -274,7 +274,7 @@ namespace Max2Babylon
 
             // Output
             RaiseMessage("Saving to output file");
-            babylonScene.Prepare(false);
+            babylonScene.Prepare(Tools.GetDefaultCameraId(), Tools.GetDefaultLightId(), false);
             var jsonSerializer = JsonSerializer.Create(new JsonSerializerSettings());
             var sb = new StringBuilder();
             var sw = new StringWriter(sb, CultureInfo.InvariantCulture);

@@ -371,45 +371,28 @@ namespace Max2Babylon
 
         public static bool IsInstance(this IAnimatable node)
         {
-            return node.Is(1);
+            return node.GetLocalDataAsBoolean(1);
         }
 
         public static void MarkAsInstance(this IAnimatable node)
         {
-            node.MarkAs(1, new byte[] { 1 });
+            if (node.GetGuid() == Loader.Core.RootNode.GetGuid())
+                return;
+            
+            node.MarkAs(1);
         }
 
         public static bool IsReference(this IAnimatable node)
         {
-            return node.Is(3);
+            return node.GetLocalDataAsBoolean(3);
         }
 
         public static void MarkAsReference(this IAnimatable node)
         {
-            node.MarkAs(3, new byte[] { 1 });
+            node.MarkAs(3);
         }
 
-        private static bool Is(this IAnimatable node, uint sbid)
-        {
-            var data = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
-
-            if (data != null)
-            {
-                return data.Data[0] != 0;
-            }
-
-            return false;
-        }
-
-        private static void UnMarkAs(this IAnimatable node, uint sbid)
-        {
-            if (!node.Is(sbid))
-                return;
-
-            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
-        }
-
-        public static void MarkAs(this IAnimatable node, uint sbid, byte[] data)
+        public static void MarkAs(this IAnimatable node, uint sbid)
         {
             // store the fact that we store data in sbid
             var indices = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
@@ -427,11 +410,22 @@ namespace Max2Babylon
             node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2, indicesList.ToArray());
 
             // store the data
-            node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid, data);
+            node.SetLocalData(sbid, new byte[] { 1 });
+        }
+
+        private static void UnMarkAs(this IAnimatable node, uint sbid)
+        {
+            if (!node.GetLocalDataAsBoolean(sbid))
+                return;
+
+            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
         }
 
         public static void UnMark(this IAnimatable node)
         {
+            if (node.GetGuid() == Loader.Core.RootNode.GetGuid())
+                return;
+            
             // is there something stored?
             var indices = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
 
@@ -451,46 +445,87 @@ namespace Max2Babylon
             node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
         }
 
-        public static Guid GetGuid(this IAnimatable node)
+        public static void SetLocalData(this IAnimatable node, uint sbid, byte[] data)
         {
-            var uidData = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 0);
-            Guid uid;
+            var previousData = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
 
-            if (uidData != null)
+            if (previousData != null)
             {
-                uid = new Guid(uidData.Data);
+                node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
             }
-            else
+
+            node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid, data);
+
+            Loader.Global.SetSaveRequiredFlag(true, true);
+        }
+
+        public static bool GetLocalDataAsBoolean(this IAnimatable node, uint sbid)
+        {
+            var data = node.GetLocalData(sbid);
+
+            return data != null && data.Length > 0 ? data[0] != 0 : false;
+        }
+
+        public static string GetLocalDataAsString(this IAnimatable node, uint sbid)
+        {
+            var data = node.GetLocalData(sbid);
+
+            return data != null ? System.Text.Encoding.UTF8.GetString(data) : string.Empty;
+        }
+
+        private static byte[] GetLocalData(this IAnimatable node, uint sbid)
+        {
+            var dataChunk = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
+
+            return dataChunk != null ? dataChunk.Data : null;
+        }
+
+        private static string GetGuid(this IAnimatable node, uint sbid)
+        {
+            var uid = node.GetLocalDataAsString(sbid);
+
+            if (uid == string.Empty)
             {
-                uid = Guid.NewGuid();
-                node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 0, uid.ToByteArray());
+                uid = Guid.NewGuid().ToString();
+                node.SetLocalData(sbid, System.Text.Encoding.UTF8.GetBytes(uid));
             }
 
             return uid;
         }
 
-        public static string GetLocalData(this IAnimatable node)
+        public static string GetGuid(this IAnimatable node)
         {
-            var uidData = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 1);
-
-            if (uidData != null)
-            {
-                return System.Text.Encoding.UTF8.GetString(uidData.Data);
-            }
-
-            return "";
+            return node.GetGuid(0);
         }
 
-        public static void SetLocalData(this IAnimatable node, string value)
+        public static string GetDefaultCameraId()
         {
-            var uidData = node.GetAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 1);
+            return Loader.Core.RootNode.GetGuid(5);
+        }
 
-            if (uidData != null)
-            {
-                node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 1);
-            }
+        public static string GetDefaultLightId()
+        {
+            return Loader.Core.RootNode.GetGuid(6);
+        }
 
-            node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 1, System.Text.Encoding.UTF8.GetBytes(value));
+        public static string GetPath()
+        {
+            return Loader.Core.RootNode.GetLocalDataAsString(1);
+        }
+
+        public static void SetPath(string path)
+        {
+            Loader.Core.RootNode.SetLocalData(1, System.Text.Encoding.UTF8.GetBytes(path));
+        }
+
+        public static string GetGeometryId(this IAnimatable node)
+        {
+            return node.GetGuid(4);
+        }
+
+        public static void SetGeometryId(this IAnimatable node, string geometryId)
+        {
+            node.SetLocalData(4, System.Text.Encoding.UTF8.GetBytes(geometryId));
         }
 
         public static IMatrix3 GetWorldMatrix(this IINode node, int t, bool parent)
