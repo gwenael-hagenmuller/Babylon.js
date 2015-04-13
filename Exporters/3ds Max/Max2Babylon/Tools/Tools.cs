@@ -418,7 +418,7 @@ namespace Max2Babylon
             if (!node.GetLocalDataAsBoolean(sbid))
                 return;
 
-            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
+            node.ClearLocalData(sbid);
         }
 
         public static void UnMark(this IAnimatable node)
@@ -439,10 +439,10 @@ namespace Max2Babylon
             var data = indices.Data;
             for (var i = 0; i < data.Length; ++i)
             {
-                node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, data[i]);
+                node.ClearLocalData(data[i]);
             }
 
-            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, 2);
+            node.ClearLocalData(2);
         }
 
         public static void SetLocalData(this IAnimatable node, uint sbid, byte[] data)
@@ -451,12 +451,60 @@ namespace Max2Babylon
 
             if (previousData != null)
             {
-                node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
+                node.ClearLocalData(sbid);
             }
 
             node.AddAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid, data);
 
             Loader.Global.SetSaveRequiredFlag(true, true);
+        }
+
+        public static void ClearLocalData(this IAnimatable node, uint sbid)
+        {
+            node.RemoveAppDataChunk(Loader.Class_ID, SClass_ID.Basenode, sbid);
+        }
+
+        public static void ClearAllLocalData(this IINode node, bool recursively = false)
+        {
+            node.ClearLocalData(0);
+            node.ClearLocalData(1);
+            node.ClearLocalData(2);
+            node.ClearLocalData(3);
+            node.ClearLocalData(4);
+            node.ClearLocalData(5);
+            node.ClearLocalData(6);
+
+            var mtl = node.Mtl;
+
+            // clear materials guids
+            if (mtl != null)
+            {
+                mtl.ClearLocalData(0);
+
+                var numSubMtls = mtl.NumSubMtls;
+
+                if (numSubMtls > 0)
+                {
+                    for (var index = 0; index < numSubMtls; index++)
+                    {
+                        var subMat = mtl.GetSubMtl(index);
+
+                        if (subMat != null)
+                        {
+                            subMat.ClearLocalData(0);
+                        }
+                    }
+                }
+            }
+
+            if (recursively)
+            {
+                var numOfChildren = node.NumberOfChildren;
+                for (var i=0; i<numOfChildren; ++i)
+                {
+                    node.GetChildNode(i).ClearAllLocalData(true);
+                }
+            }
         }
 
         public static bool GetLocalDataAsBoolean(this IAnimatable node, uint sbid)

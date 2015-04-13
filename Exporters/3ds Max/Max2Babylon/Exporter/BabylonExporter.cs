@@ -192,6 +192,8 @@ namespace Max2Babylon
                 }
             }
 
+            //Loader.Core.RootNode.ClearAllLocalData(true);
+
             // Meshes
             ReportProgressChanged(10);
             RaiseMessage("Exporting meshes");
